@@ -13,6 +13,7 @@ function createWindow(): void {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, "preload.cjs"),
     },
   });
 
@@ -22,7 +23,7 @@ function createWindow(): void {
 ipcMain.handle("run-python", () => {
   return new Promise((resolve, reject) => {
     const pythonProcess = spawn("python", [
-      path.join(__dirname, "../../backend/main.py"),
+      path.join(__dirname, "../../../backend/main.py")
     ]);
 
     let output = "";
