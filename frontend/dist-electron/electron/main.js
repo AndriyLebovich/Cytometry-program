@@ -4,6 +4,7 @@ import { fileURLToPath } from "url";
 import { spawn } from "child_process";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+console.log("PRELOAD PATH:", path.join(__dirname, "preload.js")); // Тимчасовий тест
 function createWindow() {
     const win = new BrowserWindow({
         width: 1200,
@@ -11,14 +12,18 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            preload: path.join(__dirname, "preload.cjs"),
         },
     });
+    win.webContents.on("preload-error", (_event, preloadPath, error) => {
+        console.error("PRELOAD ERROR:", preloadPath, error);
+    }); // Тимчасовий тест "виведення error"
     win.loadURL("http://localhost:5173");
 }
 ipcMain.handle("run-python", () => {
     return new Promise((resolve, reject) => {
         const pythonProcess = spawn("python", [
-            path.join(__dirname, "../../backend/main.py"),
+            path.join(__dirname, "../../../backend/main.py")
         ]);
         let output = "";
         let error = "";
