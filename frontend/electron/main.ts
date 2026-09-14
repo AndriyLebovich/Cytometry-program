@@ -20,10 +20,11 @@ function createWindow(): void {
   win.loadURL("http://localhost:5173");
 }
 
-ipcMain.handle("run-python", () => {
+ipcMain.handle("run-python", (_, command: string) => {
   return new Promise((resolve, reject) => {
     const pythonProcess = spawn("python", [
-      path.join(__dirname, "../../../backend/main.py")
+      path.join(__dirname, "../../../backend/main.py"), 
+    command
     ]);
 
     let output = "";
