@@ -6,4 +6,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
         command,
         data,
     }),
+    selectFcsFile: () => ipcRenderer.invoke("select-fcs-file"),
 });
