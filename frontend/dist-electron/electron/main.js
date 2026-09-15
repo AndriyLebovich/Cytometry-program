@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
 import { spawn } from "child_process";
@@ -16,15 +16,28 @@ function createWindow() {
     });
     win.loadURL("http://localhost:5173");
 }
+ipcMain.handle("select-fcs-file", async () => {
+    console.log("SELECT FCS FILE HANDLER CALLED");
+    const result = await dialog.showOpenDialog({
+        properties: ["openFile"],
+        filters: [
+            {
+                name: "FCS files",
+                extensions: ["fcs"],
+            },
+        ],
+    });
+    if (result.canceled || result.filePaths.length === 0) {
+        console.log("FILE SELECTION CANCELLED");
+        return null;
+    }
+    console.log("SELECTED FILE:", result.filePaths[0]);
+    return result.filePaths[0];
+});
 ipcMain.handle("run-python", (_, request) => {
-    console.log("=================================");
-    console.log("PYTHON REQUEST RECEIVED");
-    console.log("COMMAND:", request.command);
-    console.log("DATA:", request.data);
-    console.log("FULL REQUEST:", request);
-    console.log("=================================");
     return new Promise((resolve, reject) => {
-        const pythonProcess = spawn("python", [
+        const pythonPath = path.join(__dirname, "../../../venv/Scripts/python.exe");
+        const pythonProcess = spawn(pythonPath, [
             path.join(__dirname, "../../../backend/main.py"),
             request.command,
             JSON.stringify(request.data ?? {}),

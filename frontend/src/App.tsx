@@ -7,7 +7,9 @@ declare global {
         command: string,
         data?: unknown
       ) => Promise<string>
-    }
+
+      selectFcsFile: () => Promise<string | null>;
+    };
   }
 }
 import heroImg from './assets/hero.png'
@@ -18,6 +20,39 @@ import './App.css'
 function App() {
   const [count, setCount] = useState(0)
   const [pythonResult, setPythonResult] = useState('')
+
+  const [fcsResult, setFcsResult] = useState<{
+  file: string;
+  events: number;
+  channels: string[];
+} | null>(null);
+
+const testFcs = async () => {
+  try {
+    const filePath = await window.electronAPI.selectFcsFile();
+
+    if (!filePath) {
+      console.log("File selection cancelled");
+      return;
+    }
+
+    console.log("Selected FCS file:", filePath);
+
+    const result = await window.electronAPI.runPython("read_fcs", {
+  file_path: filePath,
+});
+
+const parsedResult = JSON.parse(result);
+
+console.log("FCS RESULT:", parsedResult);
+
+if (parsedResult.success) {
+  setFcsResult(parsedResult);
+}
+  } catch (error) {
+    console.error("FCS ERROR:", error);
+  }
+};
 
 const runPython = async () => {
   try {
@@ -60,6 +95,32 @@ const runPython = async () => {
         >
           Start Python 
         </button>
+
+        <button onClick={testFcs}>
+          Test FCS
+        </button>
+
+        {fcsResult && (
+  <div>
+    <h2>FCS File</h2>
+
+    <p>
+      <strong>File:</strong> {fcsResult.file}
+    </p>
+
+    <p>
+      <strong>Events:</strong> {fcsResult.events}
+    </p>
+
+    <h3>Channels</h3>
+
+    <ul>
+      {fcsResult.channels.map((channel) => (
+        <li key={channel}>{channel}</li>
+      ))}
+    </ul>
+  </div>
+)}
 
         {pythonResult && (
           <p>

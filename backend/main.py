@@ -1,7 +1,9 @@
+
 import json
 import sys
 
 from core.commands import test_command
+from fcs_reader import read_fcs
 
 
 def main():
@@ -26,6 +28,24 @@ def main():
         if data:
             result["received_data"] = data
 
+    elif command == "read_fcs":
+        file_path = data.get("file_path")
+
+        if not file_path:
+            result = {
+                "success": False,
+                "message": "Missing file_path"
+            }
+        else:
+            try:
+                result = read_fcs(file_path)
+                result["success"] = True
+            except Exception as error:
+                result = {
+                    "success": False,
+                    "message": str(error)
+                }
+
     else:
         result = {
             "success": False,
@@ -38,3 +58,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

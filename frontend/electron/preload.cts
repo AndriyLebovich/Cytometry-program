@@ -9,4 +9,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       command,
       data,
    }),
+
+   selectFcsFile: (): Promise<string | null> =>
+      ipcRenderer.invoke("select-fcs-file"),
 });
