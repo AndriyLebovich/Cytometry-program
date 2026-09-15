@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "electron": "electron dist-electron/electron/main.js",
-    "build": "tsc -b && vite build",
+    "build": "tsc -p tsconfig.electron.json && tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
   },

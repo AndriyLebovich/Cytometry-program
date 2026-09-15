@@ -3,7 +3,10 @@ import { useState } from 'react'
 declare global {
   interface Window {
     electronAPI: {
-      runPython: (command: string) => Promise<string>
+      runPython: (
+        command: string,
+        data?: unknown
+      ) => Promise<string>
     }
   }
 }
@@ -18,7 +21,11 @@ function App() {
 
 const runPython = async () => {
   try {
-    const result = await window.electronAPI.runPython("test")
+    // test
+    const result = await window.electronAPI.runPython("test", {
+  message: "Hello from React",
+  day: 6,
+});
     setPythonResult(result)
   } catch (error) {
     setPythonResult(`error: ${error}`)

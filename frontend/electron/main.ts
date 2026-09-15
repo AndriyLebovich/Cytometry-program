@@ -20,33 +20,40 @@ function createWindow(): void {
   win.loadURL("http://localhost:5173");
 }
 
-ipcMain.handle("run-python", (_, command: string) => {
-  return new Promise((resolve, reject) => {
-    const pythonProcess = spawn("python", [
-      path.join(__dirname, "../../../backend/main.py"), 
-    command
-    ]);
+ipcMain.handle(
+  "run-python",
+  (_, request: { command: string; data?: unknown }) => {
 
-    let output = "";
-    let error = "";
+    return new Promise((resolve, reject) => {
+      const pythonProcess = spawn("python", [
+        path.join(__dirname, "../../../backend/main.py"),
+        request.command,
+        JSON.stringify(request.data ?? {}),
+      ]);
 
-    pythonProcess.stdout.on("data", (data) => {
-      output += data.toString();
+      let output = "";
+      let error = "";
+
+      pythonProcess.stdout.on("data", (data) => {
+        output += data.toString();
+      });
+
+      pythonProcess.stderr.on("data", (data) => {
+        error += data.toString();
+      });
+
+      pythonProcess.on("close", (code) => {
+        if (code === 0) {
+          resolve(output);
+        } else {
+          reject(error);
+        }
+      });
     });
+  }
+);
 
-    pythonProcess.stderr.on("data", (data) => {
-      error += data.toString();
-    });
-
-    pythonProcess.on("close", (code) => {
-      if (code === 0) {
-        resolve(output);
-      } else {
-        reject(error);
-      }
-    });
-  });
-});
+console.log("ELECTRON MAIN PROCESS STARTED");
 
 app.whenReady().then(() => {
   createWindow();
