@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 
 declare global {
@@ -6,81 +7,126 @@ declare global {
       runPython: (
         command: string,
         data?: unknown
-      ) => Promise<string>
+      ) => Promise<unknown>
 
-      selectFcsFile: () => Promise<string | null>;
-    };
+      selectFcsFile: () => Promise<string | null>
+    }
   }
 }
+
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
 
+interface FcsResult {
+  success: boolean
+  file: string
+  events: number
+  channels: string[]
+}
+
+interface PythonTestResult {
+  success: boolean
+  message: string
+  received_data?: unknown
+}
+
 function App() {
   const [count, setCount] = useState(0)
   const [pythonResult, setPythonResult] = useState('')
+  const [fcsResult, setFcsResult] = useState<FcsResult | null>(null)
 
-  const [fcsResult, setFcsResult] = useState<{
-  file: string;
-  events: number;
-  channels: string[];
-} | null>(null);
+  const testFcs = async () => {
+    try {
+      const filePath = await window.electronAPI.selectFcsFile()
 
-const testFcs = async () => {
-  try {
-    const filePath = await window.electronAPI.selectFcsFile();
+      if (!filePath) {
+        console.log('File selection cancelled')
+        return
+      }
 
-    if (!filePath) {
-      console.log("File selection cancelled");
-      return;
+      console.log('Selected FCS file:', filePath)
+
+      const result = await window.electronAPI.runPython('read_fcs', {
+        file_path: filePath,
+      })
+
+      console.log('FCS RESULT:', result)
+
+      if (
+        typeof result === 'object' &&
+        result !== null &&
+        'success' in result &&
+        result.success === true
+      ) {
+        setFcsResult(result as FcsResult)
+      } else {
+        console.error('FCS ERROR:', result)
+      }
+    } catch (error) {
+      console.error('FCS ERROR:', error)
     }
-
-    console.log("Selected FCS file:", filePath);
-
-    const result = await window.electronAPI.runPython("read_fcs", {
-  file_path: filePath,
-});
-
-const parsedResult = JSON.parse(result);
-
-console.log("FCS RESULT:", parsedResult);
-
-if (parsedResult.success) {
-  setFcsResult(parsedResult);
-}
-  } catch (error) {
-    console.error("FCS ERROR:", error);
   }
-};
 
-const runPython = async () => {
-  try {
-    // test
-    const result = await window.electronAPI.runPython("test", {
-  message: "Hello from React",
-  day: 6,
-});
-    setPythonResult(result)
-  } catch (error) {
-    setPythonResult(`error: ${error}`)
+  const runPython = async () => {
+    try {
+      const result = await window.electronAPI.runPython('test', {
+        message: 'Hello from React',
+        day: 8,
+      })
+
+      console.log('PYTHON RESULT:', result)
+
+      if (
+        typeof result === 'object' &&
+        result !== null &&
+        'success' in result &&
+        'message' in result
+      ) {
+        const testResult = result as PythonTestResult
+
+        setPythonResult(testResult.message)
+      } else {
+        setPythonResult(JSON.stringify(result))
+      }
+    } catch (error) {
+      setPythonResult(`error: ${error}`)
+    }
   }
-}
 
   return (
     <>
       <section id="center">
         <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+          <img
+            src={heroImg}
+            className="base"
+            width="170"
+            height="179"
+            alt=""
+          />
+          <img
+            src={reactLogo}
+            className="framework"
+            alt="React logo"
+          />
+          <img
+            src={viteLogo}
+            className="vite"
+            alt="Vite logo"
+          />
         </div>
+
         <div>
           <h1>Get started</h1>
+
           <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
+            Edit <code>src/App.tsx</code> and save to test{' '}
+            <code>HMR</code>
           </p>
         </div>
+
         <button
           type="button"
           className="counter"
@@ -93,7 +139,7 @@ const runPython = async () => {
           type="button"
           onClick={runPython}
         >
-          Start Python 
+          Start Python
         </button>
 
         <button onClick={testFcs}>
@@ -101,26 +147,26 @@ const runPython = async () => {
         </button>
 
         {fcsResult && (
-  <div>
-    <h2>FCS File</h2>
+          <div>
+            <h2>FCS File</h2>
 
-    <p>
-      <strong>File:</strong> {fcsResult.file}
-    </p>
+            <p>
+              <strong>File:</strong> {fcsResult.file}
+            </p>
 
-    <p>
-      <strong>Events:</strong> {fcsResult.events}
-    </p>
+            <p>
+              <strong>Events:</strong> {fcsResult.events}
+            </p>
 
-    <h3>Channels</h3>
+            <h3>Channels</h3>
 
-    <ul>
-      {fcsResult.channels.map((channel) => (
-        <li key={channel}>{channel}</li>
-      ))}
-    </ul>
-  </div>
-)}
+            <ul>
+              {fcsResult.channels.map((channel) => (
+                <li key={channel}>{channel}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {pythonResult && (
           <p>
@@ -133,35 +179,60 @@ const runPython = async () => {
 
       <section id="next-steps">
         <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
+          <svg
+            className="icon"
+            role="presentation"
+            aria-hidden="true"
+          >
             <use href="/icons.svg#documentation-icon"></use>
           </svg>
+
           <h2>Documentation</h2>
           <p>Your questions, answered</p>
+
           <ul>
             <li>
               <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
+                <img
+                  className="logo"
+                  src={viteLogo}
+                  alt=""
+                />
                 Explore Vite
               </a>
             </li>
+
             <li>
               <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
+                <img
+                  className="button-icon"
+                  src={reactLogo}
+                  alt=""
+                />
                 Learn more
               </a>
             </li>
           </ul>
         </div>
+
         <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
+          <svg
+            className="icon"
+            role="presentation"
+            aria-hidden="true"
+          >
             <use href="/icons.svg#social-icon"></use>
           </svg>
+
           <h2>Connect with us</h2>
           <p>Join the Vite community</p>
+
           <ul>
             <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
+              <a
+                href="https://github.com/vitejs/vite"
+                target="_blank"
+              >
                 <svg
                   className="button-icon"
                   role="presentation"
@@ -172,8 +243,12 @@ const runPython = async () => {
                 GitHub
               </a>
             </li>
+
             <li>
-              <a href="https://chat.vite.dev/" target="_blank">
+              <a
+                href="https://chat.vite.dev/"
+                target="_blank"
+              >
                 <svg
                   className="button-icon"
                   role="presentation"
@@ -184,8 +259,12 @@ const runPython = async () => {
                 Discord
               </a>
             </li>
+
             <li>
-              <a href="https://x.com/vite_js" target="_blank">
+              <a
+                href="https://x.com/vite_js"
+                target="_blank"
+              >
                 <svg
                   className="button-icon"
                   role="presentation"
@@ -196,8 +275,12 @@ const runPython = async () => {
                 X.com
               </a>
             </li>
+
             <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
+              <a
+                href="https://bsky.app/profile/vite.dev"
+                target="_blank"
+              >
                 <svg
                   className="button-icon"
                   role="presentation"
@@ -213,6 +296,7 @@ const runPython = async () => {
       </section>
 
       <div className="ticks"></div>
+
       <section id="spacer"></section>
     </>
   )
