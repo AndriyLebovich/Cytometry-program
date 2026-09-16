@@ -71,12 +71,17 @@ ipcMain.handle(
       });
 
       pythonProcess.on("close", (code) => {
-        if (code === 0) {
-          resolve(output);
-        } else {
-          reject(error);
-        }
-      });
+  if (code === 0) {
+    try {
+      const result = JSON.parse(output);
+      resolve(result);
+    } catch {
+      reject("Invalid JSON response from Python");
+    }
+  } else {
+    reject(error);
+  }
+});
     });
   }
 );
