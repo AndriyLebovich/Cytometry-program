@@ -42,6 +42,10 @@ interface ScatterResult {
   points: ScatterPoint[]
 }
 
+interface SelectedEvent {
+  [channel: string]: number
+}
+
 interface GateResult {
   success: boolean
   count: number
@@ -51,6 +55,8 @@ interface GateResult {
   x_max: number
   y_min: number
   y_max: number
+  selected_points: ScatterPoint[]
+  selected_events: SelectedEvent[]
 }
 
 function App() {
@@ -61,6 +67,7 @@ function App() {
   const [xChannel, setXChannel] = useState('')
   const [yChannel, setYChannel] = useState('')
   const [scatterData, setScatterData] = useState<ScatterResult | null>(null)
+  const [gateHistogramChannel, setGateHistogramChannel] = useState('')
   // State for create gate
   const [gate, setGate] = useState<{
   x1: number
@@ -76,6 +83,119 @@ const [gateStart, setGateStart] = useState<{
 } | null>(null)
 
 const [gateResult, setGateResult] = useState<GateResult | null>(null)
+const [selectedPopulation, setSelectedPopulation] = useState<ScatterPoint[]>([])
+
+  const buildGateStatistics = () => {
+  if (!gateResult || gateResult.selected_events.length === 0) {
+    return {}
+  }
+
+  const events = gateResult.selected_events
+
+  const channels = Object.keys(events[0])
+
+  const statistics: Record<
+    string,
+    {
+      min: number
+      max: number
+      mean: number
+      median: number
+    }
+  > = {}
+
+  for (const channel of channels) {
+    const values = events
+      .map((event) => event[channel])
+      .filter((value) => Number.isFinite(value))
+      .sort((a, b) => a - b)
+
+    if (values.length === 0) {
+      continue
+    }
+
+    const sum = values.reduce(
+      (total, value) => total + value,
+      0
+    )
+
+    const mean = sum / values.length
+
+    const middle = Math.floor(values.length / 2)
+
+    const median =
+      values.length % 2 === 0
+        ? (values[middle - 1] + values[middle]) / 2
+        : values[middle]
+
+    statistics[channel] = {
+      min: values[0],
+      max: values[values.length - 1],
+      mean,
+      median,
+    }
+  }
+
+  return statistics
+}
+
+const buildGateHistogram = (
+  channel: string,
+  binsCount = 30
+) => {
+  if (!gateResult || !channel) {
+    return []
+  }
+
+  const values = gateResult.selected_events
+    .map((event) => event[channel])
+    .filter((value) => Number.isFinite(value))
+
+  if (values.length === 0) {
+    return []
+  }
+
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+
+  if (min === max) {
+    return [
+      {
+        start: min,
+        end: max,
+        count: values.length,
+      },
+    ]
+  }
+
+  const binWidth = (max - min) / binsCount
+
+  const bins = Array.from(
+    { length: binsCount },
+    (_, index) => ({
+      start: min + index * binWidth,
+      end:
+        index === binsCount - 1
+          ? max
+          : min + (index + 1) * binWidth,
+      count: 0,
+    })
+  )
+
+  for (const value of values) {
+    let index = Math.floor(
+      (value - min) / binWidth
+    )
+
+    if (index >= binsCount) {
+      index = binsCount - 1
+    }
+
+    bins[index].count++
+  }
+
+  return bins
+}
 
   const testFcs = async () => {
     setFcsError('')
@@ -389,16 +509,29 @@ const applyGate = async () => {
     ) {
       const gateResult = result as GateResult
 
-          setGateResult({
-            success: true,
-            count: gateResult.count,
-            total: gateResult.total,
-            percentage: gateResult.percentage,
-            x_min: xMin,
-            x_max: xMax,
-            y_min: yMin,
-            y_max: yMax,
-          })
+    setGateResult({
+      success: true,
+      count: gateResult.count,
+      total: gateResult.total,
+      percentage: gateResult.percentage,
+      x_min: xMin,
+      x_max: xMax,
+      y_min: yMin,
+      y_max: yMax,
+      selected_points: gateResult.selected_points,
+      selected_events: gateResult.selected_events,
+    })
+
+    setSelectedPopulation(gateResult.selected_points)
+
+    console.log(
+      'Selected gate points:',
+      gateResult.selected_points.length
+    )
+    console.log(
+      'Selected events:',
+      gateResult.selected_events.length
+    )
     } else {
       setFcsError('Failed to apply gate')
     }
@@ -410,7 +543,34 @@ const applyGate = async () => {
 const clearGate = () => {
   setGate(null)
   setGateResult(null)
+  setSelectedPopulation([])
 }
+
+const isPointInsideGate = (point: ScatterPoint) => {
+  if (!gateResult) {
+    return false
+  }
+
+  return (
+    point.x >= gateResult.x_min &&
+    point.x <= gateResult.x_max &&
+    point.y >= gateResult.y_min &&
+    point.y <= gateResult.y_max
+  )
+}
+
+const gateStatistics = buildGateStatistics()
+
+const gateHistogram = buildGateHistogram(
+  gateHistogramChannel
+)
+
+const maxGateHistogramCount =
+  gateHistogram.length > 0
+    ? Math.max(
+        ...gateHistogram.map((bin) => bin.count)
+      )
+    : 0
 
   return (
     <main className="app">
@@ -591,21 +751,26 @@ const clearGate = () => {
               )}
 
               {/* Points */}
-              {scatterData.points.map((point, index) => (
-                <circle
-                  key={index}
-                  cx={xScale(point.x)}
-                  cy={yScale(point.y)}
-                  r="2"
-                  opacity="0.5"
-                >
-                  <title>
-                    {scatterData.x_channel}: {point.x.toFixed(2)}
-                    {'\n'}
-                    {scatterData.y_channel}: {point.y.toFixed(2)}
-                  </title>
-                </circle>
-              ))}
+              {scatterData.points.map((point, index) => {
+            const selected = isPointInsideGate(point)
+
+        return (
+          <circle
+            key={index}
+            cx={xScale(point.x)}
+            cy={yScale(point.y)}
+            r={selected ? 3.5 : 2}
+            fill={selected ? "#ff0000" : "#888888"}
+            opacity={selected ? 1 : 0.5}
+          >
+            <title>
+        {scatterData.x_channel}: {point.x.toFixed(2)}
+        {'\n'}
+        {scatterData.y_channel}: {point.y.toFixed(2)}
+      </title>
+    </circle>
+  )
+})}
 
               {/* Gate */}
               {gate && (
@@ -772,6 +937,129 @@ const clearGate = () => {
     </p>
   </div>
 )}
+
+{selectedPopulation.length > 0 && (
+  <div className="gate-population">
+    <h3>Selected Population</h3>
+
+    <p>
+      Events available for further analysis:{' '}
+      <strong>{selectedPopulation.length.toLocaleString()}</strong>
+    </p>
+  </div>
+)}
+{Object.keys(gateStatistics).length > 0 && (
+  <div className="gate-statistics">
+    <h3>Selected Population Statistics</h3>
+
+    <div className="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th>Channel</th>
+            <th>Min</th>
+            <th>Max</th>
+            <th>Mean</th>
+            <th>Median</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {Object.entries(gateStatistics).map(
+            ([channel, statistics]) => (
+              <tr key={channel}>
+                <td>{channel}</td>
+                <td>{statistics.min.toFixed(2)}</td>
+                <td>{statistics.max.toFixed(2)}</td>
+                <td>{statistics.mean.toFixed(2)}</td>
+                <td>{statistics.median.toFixed(2)}</td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
+    </div>
+  </div>
+)}
+{selectedPopulation.length > 0 && (
+  <div className="gate-histogram">
+    <h3>Selected Population Distribution</h3>
+
+    <label>
+      Select channel:
+
+      <select
+        value={gateHistogramChannel}
+        onChange={(event) =>
+          setGateHistogramChannel(event.target.value)
+        }
+      >
+        <option value="">
+          Select a channel
+        </option>
+
+        {Object.keys(gateStatistics).map(
+          (channel) => (
+            <option
+              key={channel}
+              value={channel}
+            >
+              {channel}
+            </option>
+          )
+        )}
+      </select>
+    </label>
+
+    {gateHistogram.length > 0 && (
+      <>
+        <div className="histogram">
+          {gateHistogram.map((bin, index) => {
+            const height =
+              maxGateHistogramCount > 0
+                ? (bin.count /
+                    maxGateHistogramCount) *
+                  100
+                : 0
+
+            return (
+              <div
+                key={index}
+                className="histogram-bar"
+                style={{
+                  height: `${height}%`,
+                }}
+                title={`${bin.start.toFixed(
+                  0
+                )} – ${bin.end.toFixed(
+                  0
+                )}: ${bin.count} events`}
+              />
+            )
+          })}
+        </div>
+
+        <div className="histogram-axis">
+          <span>
+            {gateHistogram[0].start.toFixed(0)}
+          </span>
+
+          <span>
+            {gateHistogram[
+              gateHistogram.length - 1
+            ].end.toFixed(0)}
+          </span>
+        </div>
+
+        <p className="histogram-info">
+          Showing{' '}
+          {gateResult?.selected_events.length.toLocaleString()}{' '}
+          selected events
+        </p>
+      </>
+    )}
+  </div>
+)}
   </section>
 )}
 
@@ -788,6 +1076,11 @@ const clearGate = () => {
           const channel = event.target.value
 
           setXChannel(channel)
+
+          setGate(null)
+          setGateResult(null)
+          setSelectedPopulation([])
+          setGateHistogramChannel('')
 
           if (channel && yChannel) {
             loadScatterData(channel, yChannel)
@@ -810,14 +1103,19 @@ const clearGate = () => {
       <select
         value={yChannel}
         onChange={(event) => {
-          const channel = event.target.value
-
-          setYChannel(channel)
-
-          if (xChannel && channel) {
-            loadScatterData(xChannel, channel)
-          }
-        }}
+            const channel = event.target.value
+                  
+            setYChannel(channel)
+                  
+            setGate(null)
+            setGateResult(null)
+            setSelectedPopulation([])
+            setGateHistogramChannel('')
+                  
+            if (xChannel && channel) {
+              loadScatterData(xChannel, channel)
+            }
+          }}
       >
         <option value="">Select Y channel</option>
 
