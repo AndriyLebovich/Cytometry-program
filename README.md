@@ -850,3 +850,24 @@ The current implementation has completed **Day 10**.
 The next development stage is **Day 11 — Selected Population as a Separate Dataset**.
 
 The roadmap preserves the original long-term goal of implementing K-Means, DBSCAN, HDBSCAN, noise detection, small-cluster filtering, statistics, export, and final testing, while reorganizing their position to match the current architecture of the application.
+
+## Day 11 implementation notes
+
+The roadmap is currently maintained in this README; there is no separate Roadmap.md.
+
+`frontend/src/population.ts` defines a selected population as complete event records,
+channel names, source file and original event count. Scatter samples are visualization
+only. Population statistics and histograms accept this dataset directly and do not
+reload the FCS file. The dataset copies the gate response records and channels so later
+changes to the response cannot change the population. Clear Gate, axis changes and
+opening a file clear the active dataset. Pending gate responses cannot restore a cleared
+population. Multiple population management and clustering remain future work.
+
+Run `npm test` and `npm run build` from `frontend`.
+Automated coverage includes independent records, all-channel statistics, selected-only
+histograms, empty datasets, constant values and 200,000-event populations.
+A real FCS regression also verified loading, scatter sampling, full-data gating and an
+empty gate (37,395 source events / 10,000 scatter points / 14,274 selected events).
+Interactive Electron verification remains pending: open a file, draw/apply a gate,
+change the population histogram channel, clear the gate, change X/Y and open another
+file. Day 11 is partially completed until this interactive check is performed.

@@ -1,4 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
+import { createSelectedPopulation, buildPopulationStatistics, buildPopulationHistogram } from './population'
+import type { SelectedEvent, SelectedPopulation } from './population'
 import './App.css'
 
 declare global {
@@ -42,10 +44,6 @@ interface ScatterResult {
   points: ScatterPoint[]
 }
 
-interface SelectedEvent {
-  [channel: string]: number
-}
-
 interface GateResult {
   success: boolean
   count: number
@@ -60,6 +58,7 @@ interface GateResult {
 }
 
 function App() {
+  const populationRevision = useRef(0)
   const [fcsResult, setFcsResult] = useState<FcsResult | null>(null)
   const [fcsError, setFcsError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -83,122 +82,15 @@ const [gateStart, setGateStart] = useState<{
 } | null>(null)
 
 const [gateResult, setGateResult] = useState<GateResult | null>(null)
-const [selectedPopulation, setSelectedPopulation] = useState<ScatterPoint[]>([])
-
-  const buildGateStatistics = () => {
-  if (!gateResult || gateResult.selected_events.length === 0) {
-    return {}
-  }
-
-  const events = gateResult.selected_events
-
-  const channels = Object.keys(events[0])
-
-  const statistics: Record<
-    string,
-    {
-      min: number
-      max: number
-      mean: number
-      median: number
-    }
-  > = {}
-
-  for (const channel of channels) {
-    const values = events
-      .map((event) => event[channel])
-      .filter((value) => Number.isFinite(value))
-      .sort((a, b) => a - b)
-
-    if (values.length === 0) {
-      continue
-    }
-
-    const sum = values.reduce(
-      (total, value) => total + value,
-      0
-    )
-
-    const mean = sum / values.length
-
-    const middle = Math.floor(values.length / 2)
-
-    const median =
-      values.length % 2 === 0
-        ? (values[middle - 1] + values[middle]) / 2
-        : values[middle]
-
-    statistics[channel] = {
-      min: values[0],
-      max: values[values.length - 1],
-      mean,
-      median,
-    }
-  }
-
-  return statistics
-}
-
-const buildGateHistogram = (
-  channel: string,
-  binsCount = 30
-) => {
-  if (!gateResult || !channel) {
-    return []
-  }
-
-  const values = gateResult.selected_events
-    .map((event) => event[channel])
-    .filter((value) => Number.isFinite(value))
-
-  if (values.length === 0) {
-    return []
-  }
-
-  const min = Math.min(...values)
-  const max = Math.max(...values)
-
-  if (min === max) {
-    return [
-      {
-        start: min,
-        end: max,
-        count: values.length,
-      },
-    ]
-  }
-
-  const binWidth = (max - min) / binsCount
-
-  const bins = Array.from(
-    { length: binsCount },
-    (_, index) => ({
-      start: min + index * binWidth,
-      end:
-        index === binsCount - 1
-          ? max
-          : min + (index + 1) * binWidth,
-      count: 0,
-    })
-  )
-
-  for (const value of values) {
-    let index = Math.floor(
-      (value - min) / binWidth
-    )
-
-    if (index >= binsCount) {
-      index = binsCount - 1
-    }
-
-    bins[index].count++
-  }
-
-  return bins
-}
+const [selectedPopulation, setSelectedPopulation] = useState<SelectedPopulation | null>(null)
 
   const testFcs = async () => {
     setFcsError('')
+    clearGate()
+    setScatterData(null)
+    setXChannel('')
+    setYChannel('')
+    setSelectedChannel('')
     setFcsResult(null)
     setLoading(true)
 
@@ -488,6 +380,7 @@ const applyGate = async () => {
   try {
     setFcsError('')
 
+    const revision = ++populationRevision.current
     const result = await window.electronAPI.runPython(
       'apply_gate',
       {
@@ -507,6 +400,7 @@ const applyGate = async () => {
       'success' in result &&
       result.success === true
     ) {
+      if (revision !== populationRevision.current) return
       const gateResult = result as GateResult
 
     setGateResult({
@@ -522,7 +416,10 @@ const applyGate = async () => {
       selected_events: gateResult.selected_events,
     })
 
-    setSelectedPopulation(gateResult.selected_points)
+    setSelectedPopulation(createSelectedPopulation(
+      fcsResult.file, gateResult.total, fcsResult.channels, gateResult.selected_events,
+    ))
+    setGateHistogramChannel('')
 
     console.log(
       'Selected gate points:',
@@ -543,7 +440,9 @@ const applyGate = async () => {
 const clearGate = () => {
   setGate(null)
   setGateResult(null)
-  setSelectedPopulation([])
+  setSelectedPopulation(null)
+  populationRevision.current += 1
+  setGateHistogramChannel('')
 }
 
 const isPointInsideGate = (point: ScatterPoint) => {
@@ -559,10 +458,13 @@ const isPointInsideGate = (point: ScatterPoint) => {
   )
 }
 
-const gateStatistics = buildGateStatistics()
+const gateStatistics = useMemo(
+  () => buildPopulationStatistics(selectedPopulation), [selectedPopulation],
+)
 
-const gateHistogram = buildGateHistogram(
-  gateHistogramChannel
+const gateHistogram = useMemo(
+  () => buildPopulationHistogram(selectedPopulation, gateHistogramChannel),
+  [selectedPopulation, gateHistogramChannel],
 )
 
 const maxGateHistogramCount =
@@ -938,13 +840,13 @@ const maxGateHistogramCount =
   </div>
 )}
 
-{selectedPopulation.length > 0 && (
+{selectedPopulation !== null && (
   <div className="gate-population">
     <h3>Selected Population</h3>
 
     <p>
       Events available for further analysis:{' '}
-      <strong>{selectedPopulation.length.toLocaleString()}</strong>
+      <strong>{selectedPopulation.events.length.toLocaleString()}</strong>
     </p>
   </div>
 )}
@@ -981,7 +883,7 @@ const maxGateHistogramCount =
     </div>
   </div>
 )}
-{selectedPopulation.length > 0 && (
+{selectedPopulation !== null && (
   <div className="gate-histogram">
     <h3>Selected Population Distribution</h3>
 
@@ -1053,7 +955,7 @@ const maxGateHistogramCount =
 
         <p className="histogram-info">
           Showing{' '}
-          {gateResult?.selected_events.length.toLocaleString()}{' '}
+          {selectedPopulation.events.length.toLocaleString()}{' '}
           selected events
         </p>
       </>
@@ -1079,7 +981,8 @@ const maxGateHistogramCount =
 
           setGate(null)
           setGateResult(null)
-          setSelectedPopulation([])
+          setSelectedPopulation(null)
+  populationRevision.current += 1
           setGateHistogramChannel('')
 
           if (channel && yChannel) {
@@ -1109,7 +1012,8 @@ const maxGateHistogramCount =
                   
             setGate(null)
             setGateResult(null)
-            setSelectedPopulation([])
+            setSelectedPopulation(null)
+  populationRevision.current += 1
             setGateHistogramChannel('')
                   
             if (xChannel && channel) {
