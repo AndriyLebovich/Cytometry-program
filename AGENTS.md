@@ -63,6 +63,8 @@ Current functionality includes:
 
 Do not implement future clustering stages unless explicitly requested.
 
+The Current State section is a snapshot, not guaranteed to be up to date. Always verify the actual implementation before relying on it. Update the Current State section only after the requested roadmap day has been implemented and verified.
+
 ---
 
 ## Architecture
@@ -257,7 +259,24 @@ git status
 
 Do not rewrite Git history unless explicitly requested.
 
+Do not create Git commits, push changes, or modify Git history unless explicitly requested by the user.
+
 ---
+
+## Definition of Done
+
+A roadmap day is considered complete only when:
+
+1. All requested tasks are implemented or explicitly identified as already implemented.
+2. Relevant tests pass.
+3. The frontend build succeeds if frontend code was changed.
+4. Existing related functionality remains working.
+5. No unrelated roadmap features were introduced.
+6. Any limitations or unverified behavior are clearly reported.
+
+If verification is incomplete, report the day as partially completed.
+
+Do not mark a roadmap day as complete solely because the code compiles.
 
 ## When Implementing a Roadmap Day
 
