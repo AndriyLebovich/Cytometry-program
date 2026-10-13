@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
-import { createSelectedPopulation, buildPopulationStatistics, buildPopulationHistogram } from './population'
-import type { SelectedEvent, SelectedPopulation } from './population'
+import { createSelectedPopulation, savePopulation, buildPopulationStatistics, buildPopulationHistogram } from './population'
+import type { SelectedEvent, SelectedPopulation, SavedPopulation, PopulationGate } from './population'
 import './App.css'
 
 declare global {
@@ -59,6 +59,9 @@ interface GateResult {
 
 function App() {
   const populationRevision = useRef(0)
+  const [populations, setPopulations] = useState<readonly SavedPopulation[]>([])
+  const [populationGate, setPopulationGate] = useState<PopulationGate | null>(null)
+  const [savedActiveId, setSavedActiveId] = useState<string | null>(null)
   const [fcsResult, setFcsResult] = useState<FcsResult | null>(null)
   const [fcsError, setFcsError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -86,6 +89,7 @@ const [selectedPopulation, setSelectedPopulation] = useState<SelectedPopulation 
 
   const testFcs = async () => {
     setFcsError('')
+    setPopulations([])
     clearGate()
     setScatterData(null)
     setXChannel('')
@@ -416,6 +420,11 @@ const applyGate = async () => {
       selected_events: gateResult.selected_events,
     })
 
+    setPopulationGate({
+      xChannel: scatterData.x_channel, yChannel: scatterData.y_channel,
+      xMin, xMax, yMin, yMax,
+    })
+    setSavedActiveId(null)
     setSelectedPopulation(createSelectedPopulation(
       fcsResult.file, gateResult.total, fcsResult.channels, gateResult.selected_events,
     ))
@@ -439,6 +448,10 @@ const applyGate = async () => {
 
 const clearGate = () => {
   setGate(null)
+  setPopulationGate(null)
+  setSavedActiveId(null)
+  setIsDrawingGate(false)
+  setGateStart(null)
   setGateResult(null)
   setSelectedPopulation(null)
   populationRevision.current += 1
@@ -843,6 +856,15 @@ const maxGateHistogramCount =
 {selectedPopulation !== null && (
   <div className="gate-population">
     <h3>Selected Population</h3>
+    <button type="button" disabled={savedActiveId !== null} onClick={() => {
+      if (!populationGate || savedActiveId) return
+      const id = crypto.randomUUID()
+      const snapshot = savePopulation(selectedPopulation, populationGate, id, `Population ${populations.length + 1}`)
+      setPopulations((current) => [...current, snapshot])
+      setSavedActiveId(id)
+    }}>
+      {savedActiveId ? 'Population saved' : 'Save population'}
+    </button>
 
     <p>
       Events available for further analysis:{' '}
@@ -979,11 +1001,7 @@ const maxGateHistogramCount =
 
           setXChannel(channel)
 
-          setGate(null)
-          setGateResult(null)
-          setSelectedPopulation(null)
-  populationRevision.current += 1
-          setGateHistogramChannel('')
+          clearGate()
 
           if (channel && yChannel) {
             loadScatterData(channel, yChannel)
@@ -1010,11 +1028,7 @@ const maxGateHistogramCount =
                   
             setYChannel(channel)
                   
-            setGate(null)
-            setGateResult(null)
-            setSelectedPopulation(null)
-  populationRevision.current += 1
-            setGateHistogramChannel('')
+            clearGate()
                   
             if (xChannel && channel) {
               loadScatterData(xChannel, channel)
@@ -1070,6 +1084,26 @@ const maxGateHistogramCount =
     </p>
   </section>
 )}
+
+          <section className="statistics">
+            <h2>Saved populations</h2>
+            <p>Saved for this file during the current session. Clear Gate and axis changes preserve saved populations. Opening a file clears the collection.</p>
+            {populations.length === 0 ? <p>No saved populations.</p> : populations.map((population) => (
+              <details key={population.id}>
+                <summary>{population.name}: {population.events.length.toLocaleString()} events ({population.percentage.toFixed(2)}%)</summary>
+                <p>ID: {population.id}</p>
+                <p>Source: {population.sourceFile} ({population.sourceEventCount.toLocaleString()} events)</p>
+                <p>{population.gate.xChannel}: {population.gate.xMin} ? {population.gate.xMax}; {population.gate.yChannel}: {population.gate.yMin} ? {population.gate.yMax}</p>
+                {population.events.length === 0 && <p>Empty population.</p>}
+                <div className="table-container"><table>
+                  <thead><tr><th>Channel</th><th>Min</th><th>Max</th><th>Mean</th><th>Median</th></tr></thead>
+                  <tbody>{Object.entries(population.statistics).map(([channel, statistics]) => (
+                    <tr key={channel}><td>{channel}</td><td>{statistics.min.toFixed(2)}</td><td>{statistics.max.toFixed(2)}</td><td>{statistics.mean.toFixed(2)}</td><td>{statistics.median.toFixed(2)}</td></tr>
+                  ))}</tbody>
+                </table></div>
+              </details>
+            ))}
+          </section>
 
           <section className="channels">
             <h2>Channels</h2>

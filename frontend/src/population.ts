@@ -10,6 +10,47 @@ export interface SelectedPopulation {
   readonly events: readonly SelectedEvent[]
 }
 
+export interface PopulationGate {
+  readonly xChannel: string
+  readonly yChannel: string
+  readonly xMin: number
+  readonly xMax: number
+  readonly yMin: number
+  readonly yMax: number
+}
+
+export interface SavedPopulation extends SelectedPopulation {
+  readonly id: string
+  readonly name: string
+  readonly gate: PopulationGate
+  readonly statistics: ReturnType<typeof buildPopulationStatistics>
+  readonly percentage: number
+}
+
+// A session snapshot for future comparisons; no FCS reload or scatter sampling.
+export function savePopulation(
+  population: SelectedPopulation,
+  gate: PopulationGate,
+  id: string,
+  name: string,
+): SavedPopulation {
+  if (!id.trim() || !name.trim()) throw new Error('Population ID and name are required')
+  if (!population.channels.includes(gate.xChannel) || !population.channels.includes(gate.yChannel)
+    || ![gate.xMin, gate.xMax, gate.yMin, gate.yMax].every(Number.isFinite)
+    || gate.xMin > gate.xMax || gate.yMin > gate.yMax) {
+    throw new Error('Invalid population gate')
+  }
+  const snapshot = createSelectedPopulation(
+    population.sourceFile, population.sourceEventCount, population.channels, population.events,
+  )
+  return {
+    ...snapshot, id, name, gate: { ...gate },
+    statistics: buildPopulationStatistics(snapshot),
+    percentage: snapshot.sourceEventCount > 0
+      ? snapshot.events.length / snapshot.sourceEventCount * 100 : 0,
+  }
+}
+
 export function createSelectedPopulation(
   sourceFile: string,
   sourceEventCount: number,
