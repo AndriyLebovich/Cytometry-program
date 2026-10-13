@@ -871,3 +871,28 @@ empty gate (37,395 source events / 10,000 scatter points / 14,274 selected event
 Interactive Electron verification remains pending: open a file, draw/apply a gate,
 change the population histogram channel, clear the gate, change X/Y and open another
 file. Day 11 is partially completed until this interactive check is performed.
+
+
+## Day 12 implementation notes
+
+The roadmap remains in this README (Day 12: Population Management and Comparison
+Foundation). Existing Day 11 population statistics and histograms are reused.
+
+Use **Save population** after Apply Gate to retain a population in the current
+file session. Each snapshot has a UUID, name, complete independent event records,
+source file and source event count, X/Y gate channels and numerical boundaries,
+percentage and all-channel Min / Max / Mean / Median statistics. The collection
+is keyed by population ID and retains source metadata for future comparisons.
+Saved populations can be inspected under **Saved populations**. Saving the same
+active result twice is disabled; applying another gate permits another save.
+Clear Gate and axis changes clear only the active selection. Opening a file
+clears the saved collection, including when file selection is cancelled, matching
+the existing file-opening reset behavior. Data is held in memory for the current
+session; disk persistence, comparison algorithms and clustering are outside Day 12.
+
+Verification: all 6 population tests pass, including independent saved snapshots,
+multiple identifiers/gates/statistics, empty populations and invalid gate metadata.
+Interactive Electron verification remains pending: open an FCS file, save two
+different gates, inspect their statistics, clear the active gate, change axes,
+and confirm both snapshots remain; open another file and confirm the collection
+clears. Day 12 is partially completed until this interactive workflow is verified.
