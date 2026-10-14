@@ -2,6 +2,7 @@ import json
 import sys
 
 from core.commands import test_command
+from preprocessing import preprocess_fcs
 from fcs_reader import (
     read_fcs,
     read_scatter_data,
@@ -142,6 +143,16 @@ def main():
                     "success": False,
                     "message": str(error)
                 }
+
+    elif command == "preprocess":
+        try:
+            result = preprocess_fcs(
+                data.get("file_path"), data.get("channels"),
+                data.get("standardize", True),
+            )
+            result["success"] = True
+        except Exception as error:
+            result = {"success": False, "message": str(error)}
 
     else:
         result = {
