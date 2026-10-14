@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 10 is complete.**
+**Day 13 is implemented and verified by automated tests and frontend build. Manual Electron GUI verification remains outstanding.**
 
 Current functionality includes:
 
@@ -58,8 +58,14 @@ Current functionality includes:
 - Min / Max / Mean / Median statistics;
 - selected population histogram;
 - automatic gate clearing when X/Y channels change.
+- independent selected population datasets;
+- session collection of saved populations with identifiers, gates and statistics;
+- clustering channel selection, NaN/infinity removal and optional StandardScaler;
+- complete preprocessed numerical data with original event indices and a preview.
 
-**Next step: Day 11 — Selected Population as a Separate Dataset.**
+**Next roadmap step: Day 14 — K-Means Baseline (only when requested).**
+
+The roadmap is currently in README.md; Roadmap.md is absent.
 
 Do not implement future clustering stages unless explicitly requested.
 

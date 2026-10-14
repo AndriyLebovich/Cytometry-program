@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { createSelectedPopulation, savePopulation, buildPopulationStatistics, buildPopulationHistogram } from './population'
 import type { SelectedEvent, SelectedPopulation, SavedPopulation, PopulationGate } from './population'
 import './App.css'
+import Preprocessing from './Preprocessing'
 
 declare global {
   interface Window {
@@ -1104,6 +1105,8 @@ const maxGateHistogramCount =
               </details>
             ))}
           </section>
+
+          <Preprocessing key={fcsResult.file} file={fcsResult.file} channels={fcsResult.channels} />
 
           <section className="channels">
             <h2>Channels</h2>

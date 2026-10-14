@@ -896,3 +896,11 @@ Interactive Electron verification remains pending: open an FCS file, save two
 different gates, inspect their statistics, clear the active gate, change axes,
 and confirm both snapshots remain; open another file and confirm the collection
 clears. Day 12 is partially completed until this interactive workflow is verified.
+
+## Day 13 — Data Preprocessing
+
+Implemented: open an FCS file, choose **Clustering channels** under **Data preprocessing**, optionally disable **Standardize channels**, then click **Prepare dataset**.
+
+Preprocessing uses all raw events, independently of scatter sampling and manual gates. Rows containing NaN or infinity in any chosen channel are removed. The dataset retains the chosen channel order, numerical rows, zero-based original event indices, removed event indices, counts, source file, and scaler mean/scale. StandardScaler is fitted only to retained rows; empty datasets are safe. The UI displays counts and a five-row preview while keeping the complete result in state. Results are cleared when preprocessing settings or the file change. No clustering is performed in Day 13.
+
+Verification: `venv/Scripts/python.exe -m unittest discover -s backend/tests -v`; in `frontend`, run `npm test`, `npm run lint`, and `npm run build`. The Python integration test generates an FCS file and checks preprocessing alongside existing manual gating. Manual Electron GUI verification remains outstanding.
