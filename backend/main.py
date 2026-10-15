@@ -3,6 +3,7 @@ import sys
 
 from core.commands import test_command
 from preprocessing import preprocess_fcs
+from clustering import cluster_kmeans
 from fcs_reader import (
     read_fcs,
     read_scatter_data,
@@ -17,7 +18,7 @@ def main():
 
     if len(sys.argv) > 2:
         try:
-            data = json.loads(sys.argv[2])
+            data = json.loads(sys.stdin.read() if sys.argv[2] == "--stdin" else sys.argv[2])
         except json.JSONDecodeError:
             result = {
                 "success": False,
@@ -143,6 +144,15 @@ def main():
                     "success": False,
                     "message": str(error)
                 }
+
+    elif command == "kmeans":
+        try:
+            result = cluster_kmeans(
+                data.get("data"), data.get("event_indices"), data.get("n_clusters"),
+            )
+            result["success"] = True
+        except Exception as error:
+            result = {"success": False, "message": str(error)}
 
     elif command == "preprocess":
         try:
