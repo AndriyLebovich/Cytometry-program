@@ -53,7 +53,7 @@ ipcMain.handle("run-python", (_, request) => {
         pythonProcess.stderr.on("data", (data) => {
             error += data.toString();
         });
-        pythonProcess.on("close", (code) => {
+        pythonProcess.on("close", (code, signal) => {
             if (code === 0) {
                 try {
                     const result = JSON.parse(output);
@@ -64,7 +64,8 @@ ipcMain.handle("run-python", (_, request) => {
                 }
             }
             else {
-                reject(error);
+                reject(new Error(error.trim() ||
+                    `Python command ${request.command} exited without an error message (exit code ${code}, signal ${signal ?? "none"}). The process may have exhausted available memory.`));
             }
         });
     });

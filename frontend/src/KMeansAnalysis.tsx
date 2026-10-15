@@ -14,11 +14,26 @@ interface KMeansResult {
   inertia: number
 }
 
-const color = (label: number, count: number) => `hsl(${label * 360 / count}, 70%, 42%)`
+interface DBSCANResult {
+  success: true
+  algorithm: 'dbscan'
+  eps: number
+  min_samples: number
+  n_clusters: number
+  labels: number[]
+  event_indices: number[]
+  cluster_sizes: number[]
+  noise_count: number
+}
 
-export default function KMeansAnalysis({ dataset }: { dataset: PreprocessedDataset }) {
+const color = (label: number, count: number) => label === -1 ? '#64748b' : `hsl(${label * 360 / count}, 70%, 42%)`
+
+export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { dataset: PreprocessedDataset; algorithm?: 'kmeans' | 'dbscan' }) {
+  const name = algorithm === 'dbscan' ? 'DBSCAN' : 'K-Means'
+  const [eps, setEps] = useState(0.5)
+  const [minSamples, setMinSamples] = useState(5)
   const [count, setCount] = useState(2)
-  const [result, setResult] = useState<KMeansResult | null>(null)
+  const [result, setResult] = useState<KMeansResult | DBSCANResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [x, setX] = useState(0)
@@ -31,15 +46,16 @@ export default function KMeansAnalysis({ dataset }: { dataset: PreprocessedDatas
     setResult(null)
     setError('')
     try {
-      const response = await window.electronAPI.runPython('kmeans', {
-        data: dataset.data, event_indices: dataset.event_indices, n_clusters: count,
+      const response = await window.electronAPI.runPython(algorithm, {
+        data: dataset.data, event_indices: dataset.event_indices,
+        ...(algorithm === 'dbscan' ? { eps, min_samples: minSamples } : { n_clusters: count }),
       })
       if (current !== revision.current) return
       if (typeof response === 'object' && response !== null && 'success' in response && response.success === true) {
-        setResult(response as KMeansResult)
+        setResult(response as KMeansResult | DBSCANResult)
       } else {
         throw new Error(typeof response === 'object' && response !== null && 'message' in response
-          ? String(response.message) : 'K-Means failed')
+          ? String(response.message) : `${name} failed`)
       }
     } catch (failure) {
       if (current === revision.current) setError(String(failure))
@@ -58,7 +74,7 @@ export default function KMeansAnalysis({ dataset }: { dataset: PreprocessedDatas
   const sampleSize = Math.min(2000, dataset.data.length)
   const rows = Array.from({ length: sampleSize }, (_, index) => Math.floor(index * dataset.data.length / sampleSize))
   const plot = (colored: boolean) => <svg viewBox="0 0 460 330" role="img"
-    aria-label={colored ? 'K-Means clusters' : 'Original retained events'} style={{ width: '100%', maxWidth: 460 }}>
+    aria-label={colored ? `${name} clusters` : 'Original retained events'} style={{ width: '100%', maxWidth: 460 }}>
     <path d="M55 15 V280 H445" fill="none" stroke="currentColor" />
     {rows.map(index => {
       const row = dataset.data[index]
@@ -66,7 +82,7 @@ export default function KMeansAnalysis({ dataset }: { dataset: PreprocessedDatas
       const py = bounds[3] === bounds[2] ? 147 : 280 - (rawValue(row, y) - bounds[2]) / (bounds[3] - bounds[2]) * 265
       return <circle key={index} cx={px} cy={py} r="2" opacity="0.65"
         fill={colored && result ? color(result.labels[index], result.n_clusters) : '#64748b'}>
-        <title>Event {dataset.event_indices[index]}{colored && result ? `; cluster ${result.labels[index] + 1}` : ''}</title>
+        <title>Event {dataset.event_indices[index]}{colored && result ? result.labels[index] === -1 ? '; noise' : `; cluster ${result.labels[index] + 1}` : ''}</title>
       </circle>
     })}
     <text x="250" y="325" textAnchor="middle">{dataset.channels[x]}</text>
@@ -78,22 +94,43 @@ export default function KMeansAnalysis({ dataset }: { dataset: PreprocessedDatas
   </svg>
 
   return <div>
-    <h3>K-Means baseline</h3>
-    <p>K-Means assigns every retained event to a mathematical cluster. It does not detect noise or validate biological populations.</p>
-    <label>Number of clusters <input type="number" min="1" max={dataset.retained_count} value={count}
+    <h3>{name}{algorithm === 'kmeans' ? ' baseline' : ' density clustering'}</h3>
+    <p>{algorithm === 'dbscan'
+      ? 'DBSCAN detects dense mathematical groups and marks other events as noise. Detected clusters are not biologically validated populations. eps uses the prepared dataset units.'
+      : 'K-Means assigns every retained event to a mathematical cluster. It does not detect noise or validate biological populations.'}</p>
+    {algorithm === 'kmeans' ? <label>Number of clusters <input type="number" min="1" max={dataset.retained_count} value={count}
       onChange={event => {
         revision.current += 1
         setCount(Number(event.target.value))
         setResult(null)
         setError('')
         setBusy(false)
+      }} /></label> : <>
+      <label>eps <input type="number" min="0" step="any" value={eps} onChange={event => {
+        revision.current += 1
+        setEps(Number(event.target.value))
+        setResult(null)
+        setError('')
+        setBusy(false)
       }} /></label>
-    <button type="button" disabled={busy || !Number.isInteger(count) || count < 1 || count > dataset.retained_count} onClick={run}>
-      {busy ? 'Clustering…' : 'Run K-Means'}
+      <label>min_samples <input type="number" min="1" step="1" value={minSamples} onChange={event => {
+        revision.current += 1
+        setMinSamples(Number(event.target.value))
+        setResult(null)
+        setError('')
+        setBusy(false)
+      }} /></label>
+    </>}
+    <button type="button" disabled={busy || dataset.retained_count === 0 || (algorithm === 'dbscan'
+      ? !Number.isFinite(eps) || eps <= 0 || !Number.isInteger(minSamples) || minSamples < 1
+      : !Number.isInteger(count) || count < 1 || count > dataset.retained_count)} onClick={run}>
+      {busy ? 'Clustering…' : `Run ${name}`}
     </button>
     {error && <p role="alert">{error}</p>}
     {result && <>
-      <p>{result.labels.length.toLocaleString()} events assigned; inertia: {result.inertia.toPrecision(5)}.</p>
+      <p>{result.labels.length.toLocaleString()} events analyzed; {result.n_clusters} detected clusters.
+        {result.algorithm === 'kmeans' ? ` Inertia: ${result.inertia.toPrecision(5)}.`
+          : ` Noise: ${result.noise_count.toLocaleString()} events (${(result.noise_count / result.labels.length * 100).toFixed(2)}%). Noise is shown in gray.`}</p>
       <ul>{result.cluster_sizes.map((size, label) => <li key={label} style={{ color: color(label, result.n_clusters) }}>
         Detected cluster {label + 1}: {size.toLocaleString()} events ({(size / result.labels.length * 100).toFixed(2)}%)
       </li>)}</ul>
@@ -104,7 +141,7 @@ export default function KMeansAnalysis({ dataset }: { dataset: PreprocessedDatas
       <p>Same events and axis ranges in original channel units. Showing {sampleSize.toLocaleString()} of {dataset.retained_count.toLocaleString()} retained events; clustering uses all retained events. Removed invalid events are excluded from both plots.</p>
       <div style={{ display: 'flex', flexWrap: 'wrap' }}>
         <div><h4>Original scatter (retained events)</h4>{plot(false)}</div>
-        <div><h4>K-Means clusters</h4>{plot(true)}</div>
+        <div><h4>{name} clusters{algorithm === 'dbscan' ? ' and noise' : ''}</h4>{plot(true)}</div>
       </div>
     </>}
   </div>

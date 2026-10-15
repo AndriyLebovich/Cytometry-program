@@ -328,14 +328,6 @@ A clean and normalized dataset ready for automated clustering.
 
 ## Day 14 — K-Means Baseline
 
-Implemented: prepare a dataset using Day 13, choose **Number of clusters**, and click **Run K-Means**. K-Means reuses the complete prepared matrix without reloading the FCS file or repeating preprocessing. Results retain labels and original event indices, cluster sizes, centers in preprocessing units, and inertia. Runs use `random_state=42` and `n_init=10` for a reproducible baseline.
-
-The original retained-event scatter and colored cluster scatter use identical events, axis ranges, and original channel units (StandardScaler is inverted for display). Choose either axis from the preprocessing channels. Plots show up to 2,000 evenly sampled retained events; all retained events are clustered. Changing preprocessing settings or preparing a new dataset clears clustering results; changing the cluster count clears the previous result. Manual gating and saved populations remain available.
-
-Empty datasets, invalid cluster counts, non-finite data, and requests for more clusters than distinct rows produce explicit errors. K-Means assigns every retained event and does not detect noise or biologically validate populations. DBSCAN, HDBSCAN, and small-cluster filtering are outside Day 14.
-
-Automated verification passed: 8 Python tests (including known groups, original-event mapping, reproducibility, large JSON via stdin, legacy command compatibility, FCS reading and manual gating), 6 frontend population tests, lint, and frontend/Electron build. Manual Electron GUI verification remains outstanding, so verification of Day 14 is partial.
-
 **Goal**
 
 Create an initial automated clustering baseline.
@@ -912,3 +904,22 @@ Implemented: open an FCS file, choose **Clustering channels** under **Data prepr
 Preprocessing uses all raw events, independently of scatter sampling and manual gates. Rows containing NaN or infinity in any chosen channel are removed. The dataset retains the chosen channel order, numerical rows, zero-based original event indices, removed event indices, counts, source file, and scaler mean/scale. StandardScaler is fitted only to retained rows; empty datasets are safe. The UI displays counts and a five-row preview while keeping the complete result in state. Results are cleared when preprocessing settings or the file change. No clustering is performed in Day 13.
 
 Verification: `venv/Scripts/python.exe -m unittest discover -s backend/tests -v`; in `frontend`, run `npm test`, `npm run lint`, and `npm run build`. The Python integration test generates an FCS file and checks preprocessing alongside existing manual gating. Manual Electron GUI verification remains outstanding.
+
+## Day 14 — K-Means Baseline
+
+Implemented: prepare a dataset using Day 13, choose **Number of clusters**, and click **Run K-Means**. K-Means reuses the complete prepared matrix without reloading the FCS file or repeating preprocessing. Results retain labels and original event indices, cluster sizes, centers in preprocessing units, and inertia. Runs use `random_state=42` and `n_init=10` for a reproducible baseline.
+
+The original retained-event scatter and colored cluster scatter use identical events, axis ranges, and original channel units (StandardScaler is inverted for display). Choose either axis from the preprocessing channels. Plots show up to 2,000 evenly sampled retained events; all retained events are clustered. Changing preprocessing settings or preparing a new dataset clears clustering results; changing the cluster count clears the previous result. Manual gating and saved populations remain available.
+
+Empty datasets, invalid cluster counts, non-finite data, and requests for more clusters than distinct rows produce explicit errors. K-Means assigns every retained event and does not detect noise or biologically validate populations. DBSCAN, HDBSCAN, and small-cluster filtering are outside Day 14.
+
+Automated verification passed: 8 Python tests (including known groups, original-event mapping, reproducibility, large JSON via stdin, legacy command compatibility, FCS reading and manual gating), 6 frontend population tests, lint, and frontend/Electron build. Manual Electron GUI verification remains outstanding, so verification of Day 14 is partial.
+
+## Day 15 — DBSCAN
+
+Implemented: after **Prepare dataset**, set **eps** (default 0.5) and **min_samples** (default 5), then click **Run DBSCAN**. scikit-learn DBSCAN uses all prepared rows without reloading FCS or repeating preprocessing. eps uses prepared units (standardized when StandardScaler is enabled). Labels retain original event indices; `-1` denotes noise. A KDTree count-only check selects the execution path: up to 5,000,000 neighbor links use scikit-learn DBSCAN; denser datasets use exact Euclidean DBSCAN expansion with scikit-learn KDTree queries, storing one neighborhood at a time. No events are sampled or discarded. The dense fallback reduces memory use but can still take quadratic time for difficult datasets. Electron reports the exit code if Python terminates without stderr. Results include cluster sizes and noise count/percentage, including the all-noise case.
+
+The existing scatter component is shared with K-Means. Clusters use colors and noise is gray; original and labeled plots use matching events, axes and original channel units. Up to 2,000 retained events are displayed while all retained events are analyzed. Changing parameters or preprocessing clears results. K-Means, manual gating and saved populations remain available. Parameter experiments, HDBSCAN and small-cluster filtering remain outside Day 15. Clusters are mathematical groups, not biologically validated populations.
+
+Verification: 12 Python tests and 6 frontend tests pass; lint and frontend/Electron build pass. Tests cover groups with noise, original-event mapping, all-noise data, duplicate/single events, validation, stdin integration and existing K-Means/FCS/manual gating. Manual Electron GUI verification remains outstanding; Day 15 verification is partial. Manual check: prepare an FCS dataset, run DBSCAN, inspect clusters/noise, change axes and parameters, rerun, and confirm preprocessing changes clear results; also verify K-Means and manual gating.
+DBSCAN dense-data regression: 8 clustering tests pass, including forced fallback compared against scikit-learn on random data, duplicate points, separated groups and noise. A synthetic dense dataset of 750,000 events at eps=0.5 completed with one cluster and no noise in about 2.3 seconds (including input construction, excluding Python startup). This replaces the previous memory-budget rejection. The user-reported real FCS dataset remains unverified.
