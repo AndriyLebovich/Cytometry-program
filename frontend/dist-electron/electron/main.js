@@ -40,10 +40,13 @@ ipcMain.handle("run-python", (_, request) => {
         const pythonProcess = spawn(pythonPath, [
             path.join(__dirname, "../../../backend/main.py"),
             request.command,
-            JSON.stringify(request.data ?? {}),
+            "--stdin",
         ]);
         let output = "";
         let error = "";
+        pythonProcess.on("error", reject);
+        pythonProcess.stdin.on("error", reject);
+        pythonProcess.stdin.end(JSON.stringify(request.data ?? {}));
         pythonProcess.stdout.on("data", (data) => {
             output += data.toString();
         });

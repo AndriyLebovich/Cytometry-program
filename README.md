@@ -328,6 +328,14 @@ A clean and normalized dataset ready for automated clustering.
 
 ## Day 14 — K-Means Baseline
 
+Implemented: prepare a dataset using Day 13, choose **Number of clusters**, and click **Run K-Means**. K-Means reuses the complete prepared matrix without reloading the FCS file or repeating preprocessing. Results retain labels and original event indices, cluster sizes, centers in preprocessing units, and inertia. Runs use `random_state=42` and `n_init=10` for a reproducible baseline.
+
+The original retained-event scatter and colored cluster scatter use identical events, axis ranges, and original channel units (StandardScaler is inverted for display). Choose either axis from the preprocessing channels. Plots show up to 2,000 evenly sampled retained events; all retained events are clustered. Changing preprocessing settings or preparing a new dataset clears clustering results; changing the cluster count clears the previous result. Manual gating and saved populations remain available.
+
+Empty datasets, invalid cluster counts, non-finite data, and requests for more clusters than distinct rows produce explicit errors. K-Means assigns every retained event and does not detect noise or biologically validate populations. DBSCAN, HDBSCAN, and small-cluster filtering are outside Day 14.
+
+Automated verification passed: 8 Python tests (including known groups, original-event mapping, reproducibility, large JSON via stdin, legacy command compatibility, FCS reading and manual gating), 6 frontend population tests, lint, and frontend/Electron build. Manual Electron GUI verification remains outstanding, so verification of Day 14 is partial.
+
 **Goal**
 
 Create an initial automated clustering baseline.

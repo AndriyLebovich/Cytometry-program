@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
+import KMeansAnalysis from './KMeansAnalysis'
 
-interface PreprocessedDataset {
+export interface PreprocessedDataset {
   success: true
   source_file: string
   channels: string[]
@@ -83,6 +84,7 @@ export default function Preprocessing({ file, channels }: { file: string; channe
           </tr>)}</tbody>
         </table></div>
       </>}
+      <KMeansAnalysis dataset={dataset} />
     </div>}
   </section>
 }
