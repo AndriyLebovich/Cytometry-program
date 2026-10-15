@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 14 is implemented and verified by automated tests and frontend build. Verification is partial: manual Electron GUI verification remains outstanding.**
+**Day 15 is implemented and verified by automated tests and frontend build. Verification is partial: manual Electron GUI verification remains outstanding.**
 
 Current functionality includes:
 
@@ -63,9 +63,10 @@ Current functionality includes:
 - clustering channel selection, NaN/infinity removal and optional StandardScaler;
 - complete preprocessed numerical data with original event indices and a preview.
 - K-Means baseline on prepared data with labels, original event indices and cluster sizes;
-- original versus colored cluster scatter comparison in original channel units.
+- original versus colored cluster scatter comparison in original channel units;
+- DBSCAN on prepared data with configurable eps/min_samples, original event indices, cluster sizes and gray noise visualization.
 
-**Next roadmap step: Day 15 â€” DBSCAN (only when requested).**
+**Next roadmap step: Day 16 — DBSCAN Parameter Experiments (only when requested).**
 
 The roadmap is currently in README.md; Roadmap.md is absent.
 

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import KMeansAnalysis from './KMeansAnalysis'
+import ClusteringAnalysis from './KMeansAnalysis'
 
 export interface PreprocessedDataset {
   success: true
@@ -84,7 +84,8 @@ export default function Preprocessing({ file, channels }: { file: string; channe
           </tr>)}</tbody>
         </table></div>
       </>}
-      <KMeansAnalysis dataset={dataset} />
+      <ClusteringAnalysis dataset={dataset} />
+      <ClusteringAnalysis dataset={dataset} algorithm="dbscan" />
     </div>}
   </section>
 }

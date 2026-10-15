@@ -74,7 +74,7 @@ ipcMain.handle(
         error += data.toString();
       });
 
-      pythonProcess.on("close", (code) => {
+      pythonProcess.on("close", (code, signal) => {
   if (code === 0) {
     try {
       const result = JSON.parse(output);
@@ -83,7 +83,8 @@ ipcMain.handle(
       reject("Invalid JSON response from Python");
     }
   } else {
-    reject(error);
+    reject(new Error(error.trim() ||
+      `Python command ${request.command} exited without an error message (exit code ${code}, signal ${signal ?? "none"}). The process may have exhausted available memory.`));
   }
 });
     });
