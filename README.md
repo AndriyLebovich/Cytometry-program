@@ -368,6 +368,8 @@ DBSCAN can automatically identify dense groups of events and mark events outside
 
 ## Day 16 — DBSCAN Parameter Experiments
 
+Implementation, usage, controlled experiment results and verification limits: [Day16.md](Day16.md).
+
 **Goal**
 
 Understand how DBSCAN parameters affect population detection.

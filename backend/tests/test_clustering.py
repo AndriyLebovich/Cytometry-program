@@ -61,6 +61,26 @@ class KMeansTests(unittest.TestCase):
 
 
 class DBSCANTests(unittest.TestCase):
+    def test_day16_parameter_effects_on_controlled_data(self):
+        # Two triplets, a small pair and an isolated event in prepared units.
+        data = [[0], [.15], [.3], [.8], [.95], [1.1], [3], [3.15], [9]]
+        indices = [2, 4, 6, 8, 10, 12, 14, 16, 18]
+        before = json.dumps(data)
+        results = {(eps, minimum): cluster_dbscan(data, indices, eps, minimum)
+                   for minimum in [2, 3, 5]
+                   for eps in [.1, .2, .3, .5, .7]}
+        self.assertEqual(results[.1, 2]['noise_count'], 9)
+        self.assertEqual(sorted(results[.2, 2]['cluster_sizes']), [2, 3, 3])
+        self.assertEqual(results[.2, 3]['cluster_sizes'], [3, 3])
+        self.assertEqual(results[.2, 3]['noise_count'], 3)
+        self.assertEqual(results[.2, 5]['n_clusters'], 0)
+        self.assertEqual(results[.7, 2]['cluster_sizes'], [6, 2])
+        self.assertEqual(cluster_dbscan(data, indices, 10, 2)['cluster_sizes'], [9])
+        for result in results.values():
+            self.assertEqual(result['event_indices'], indices)
+            self.assertEqual(sum(result['cluster_sizes']) + result['noise_count'], len(data))
+        self.assertEqual(json.dumps(data), before)
+
     def test_groups_noise_and_original_mapping(self):
         prepared = preprocess_events([[0, 0], [np.nan, 1], [0, .1],
                                      [10, 10], [10, 10.1], [100, 100]],
