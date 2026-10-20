@@ -17,7 +17,7 @@ interface KMeansResult {
 }
 
 
-interface HDBSCANResult {
+export interface HDBSCANResult {
   success: true
   algorithm: 'hdbscan'
   min_cluster_size: number
@@ -31,17 +31,24 @@ interface HDBSCANResult {
 
 const color = (label: number, count: number) => label === -1 ? '#64748b' : `hsl(${label * 360 / count}, 70%, 42%)`
 
-export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { dataset: PreprocessedDataset; algorithm?: 'kmeans' | 'dbscan' | 'hdbscan' }) {
+export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comparison }: {
+  dataset: PreprocessedDataset
+  algorithm?: 'kmeans' | 'dbscan' | 'hdbscan'
+  comparison?: { result: DBSCANResult | HDBSCANResult; x: number; y: number }
+}) {
   const name = algorithm === 'hdbscan' ? 'HDBSCAN' : algorithm === 'dbscan' ? 'DBSCAN' : 'K-Means'
   const [eps, setEps] = useState(0.5)
   const [minSamples, setMinSamples] = useState(5)
   const [minClusterSize, setMinClusterSize] = useState(5)
   const [count, setCount] = useState(2)
-  const [result, setResult] = useState<KMeansResult | DBSCANResult | HDBSCANResult | null>(null)
+  const [localResult, setResult] = useState<KMeansResult | DBSCANResult | HDBSCANResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
-  const [x, setX] = useState(0)
-  const [y, setY] = useState(Math.min(1, dataset.channels.length - 1))
+  const [localX, setX] = useState(0)
+  const [localY, setY] = useState(Math.min(1, dataset.channels.length - 1))
+  const result = comparison?.result ?? localResult
+  const x = comparison?.x ?? localX
+  const y = comparison?.y ?? localY
   const [minimums, setMinimums] = useState('5, 10, 20')
   const [experiments, setExperiments] = useState<DBSCANResult[]>([])
   const revision = useRef(0)
@@ -138,7 +145,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
       : algorithm === 'dbscan'
       ? 'DBSCAN detects dense mathematical groups and marks other events as noise. Detected clusters are not biologically validated populations. eps uses the prepared dataset units.'
       : 'K-Means assigns every retained event to a mathematical cluster. It does not detect noise or validate biological populations.'}</p>
-    {algorithm === 'kmeans' ? <label>Number of clusters <input disabled={busy} type="number" min="1" max={dataset.retained_count} value={count}
+    {!comparison && <>{algorithm === 'kmeans' ? <label>Number of clusters <input disabled={busy} type="number" min="1" max={dataset.retained_count} value={count}
       onChange={event => {
         revision.current += 1
         setCount(Number(event.target.value))
@@ -205,6 +212,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
         </table></div>
       </>}
     </section>}
+    </>}
     {error && <p role="alert">{error}</p>}
     {result && <>
       {result.algorithm === 'hdbscan' && <p>Displayed result: min_cluster_size {result.min_cluster_size}; min_samples {result.min_samples}.</p>}
@@ -215,13 +223,13 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
       <ul>{result.cluster_sizes.map((size, label) => <li key={label} style={{ color: color(label, result.n_clusters) }}>
         Detected cluster {label + 1}: {size.toLocaleString()} events ({(size / result.labels.length * 100).toFixed(2)}%)
       </li>)}</ul>
-      {(['X', 'Y'] as const).map(axis => <label key={axis}>{axis} axis <select value={axis === 'X' ? x : y}
+      {!comparison && (['X', 'Y'] as const).map(axis => <label key={axis}>{axis} axis <select value={axis === 'X' ? x : y}
         onChange={event => (axis === 'X' ? setX : setY)(Number(event.target.value))}>
         {dataset.channels.map((channel, index) => <option key={channel} value={index}>{channel}</option>)}
       </select></label>)}
       <p>Same events and axis ranges in original channel units. Showing {sampleSize.toLocaleString()} of {dataset.retained_count.toLocaleString()} retained events; clustering uses all retained events. Removed invalid events are excluded from both plots.</p>
       <div style={{ display: 'flex', flexWrap: 'wrap' }}>
-        <div><h4>Original scatter (retained events)</h4>{plot(false)}</div>
+        {!comparison && <div><h4>Original scatter (retained events)</h4>{plot(false)}</div>}
         <div><h4>{name} clusters{algorithm !== 'kmeans' ? ' and noise' : ''}</h4>{plot(true)}</div>
       </div>
     </>}

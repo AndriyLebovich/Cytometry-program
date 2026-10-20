@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import DensityComparison from './DensityComparison'
 import ClusteringAnalysis from './KMeansAnalysis'
 
 export interface PreprocessedDataset {
@@ -84,6 +85,7 @@ export default function Preprocessing({ file, channels }: { file: string; channe
           </tr>)}</tbody>
         </table></div>
       </>}
+      <DensityComparison dataset={dataset} />
       <ClusteringAnalysis dataset={dataset} />
       <ClusteringAnalysis dataset={dataset} algorithm="dbscan" />
       <ClusteringAnalysis dataset={dataset} algorithm="hdbscan" />

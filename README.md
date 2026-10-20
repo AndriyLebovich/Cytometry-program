@@ -924,7 +924,7 @@ The existing scatter component is shared with K-Means. Clusters use colors and n
 Verification: 12 Python tests and 6 frontend tests pass; lint and frontend/Electron build pass. Tests cover groups with noise, original-event mapping, all-noise data, duplicate/single events, validation, stdin integration and existing K-Means/FCS/manual gating. Manual Electron GUI verification remains outstanding; Day 15 verification is partial. Manual check: prepare an FCS dataset, run DBSCAN, inspect clusters/noise, change axes and parameters, rerun, and confirm preprocessing changes clear results; also verify K-Means and manual gating.
 DBSCAN dense-data regression: 8 clustering tests pass, including forced fallback compared against scikit-learn on random data, duplicate points, separated groups and noise. A synthetic dense dataset of 750,000 events at eps=0.5 completed with one cluster and no noise in about 2.3 seconds (including input construction, excluding Python startup). This replaces the previous memory-budget rejection. The user-reported real FCS dataset remains unverified.
 
-# Day 16: DBSCAN parameter experiments
+## Day 16: DBSCAN parameter experiments
 
 The existing DBSCAN command, complete prepared dataset, event mapping and scatter plots are reused. No new clustering algorithm or small-cluster filtering was introduced.
 
@@ -959,7 +959,7 @@ Backend regression tests cover preprocessing, FCS file loading, manual gating, K
 
 Manual Electron GUI verification and experiments on a representative user FCS sample remain outstanding; no such sample is stored in this repository. The existing FCS regression uses a generated FCS fixture. Day 16 is partially complete pending those manual checks. Large datasets can make a series of DBSCAN runs slow. No parameter is automatically declared optimal, and cluster identifiers are local to each run.
 
-# Day 17 - HDBSCAN
+## Day 17 - HDBSCAN
 
 Implemented and automatically verified. Overall verification is partial: manual Electron GUI checks and validation on representative user FCS files remain outstanding.
 
@@ -990,3 +990,80 @@ Parameter semantics: [HDBSCAN API](https://hdbscan.readthedocs.io/en/latest/api.
 - Sandbox initially blocked Node child processes and Python temporary-file access; affected checks passed outside the sandbox.
 
 Manual Electron checklist remains: load a representative FCS file, prepare channels, run HDBSCAN, inspect cluster colors/gray noise, change axes and parameters, re-prepare data, and check manual gating plus existing clustering panels. Generated FCS fixtures do not verify biological interpretation or performance on large user datasets.
+
+
+## Day 18 - DBSCAN vs HDBSCAN
+
+Implemented with automated verification. Overall verification remains partial pending
+manual Electron checks and representative user FCS validation.
+
+### Reused implementation
+
+Day 15 DBSCAN, Day 16 experiments, Day 17 HDBSCAN, the stdin JSON bridge and
+complete Day 13 prepared data already worked. The new comparison calls those same
+commands sequentially; it does not reload FCS, repeat preprocessing or cluster a
+scatter sample. The existing clustering component also renders comparison results.
+Manual gating, saved populations and standalone clustering panels remain available.
+No Day 19 small-cluster filtering was introduced.
+
+### Usage
+
+Prepare a dataset, then use **DBSCAN vs HDBSCAN**. Set DBSCAN eps/min_samples and
+HDBSCAN min_cluster_size/min_samples independently. Click **Compare DBSCAN and
+HDBSCAN**. The table compares cluster counts, noise counts/percentages and every
+cluster size/percentage, using all retained events as denominator. Both successful
+results must refer to identical original event indices in identical order before
+the pair is displayed. A failure is reported without displaying an incomplete pair.
+
+The two scatter plots share X/Y selectors, event samples and axis ranges, using
+original channel units. Up to 2,000 events are shown; all retained events are
+clustered. Noise is gray. Cluster identifiers/colors are local to each algorithm,
+so matching identifiers do not imply matching populations. Parameter changes clear
+the comparison. Preparing new data, changing preprocessing settings or opening
+another file removes the comparison through the existing dataset lifecycle.
+Unmounting stops scheduling the second command; an already running Python command
+is allowed to finish and its stale response is ignored.
+
+### Controlled observations and MVP decision
+
+The regression fixture contains two Gaussian groups of 30 events, one invalid row
+and one distant event. StandardScaler is applied after removing the invalid row;
+both methods receive the same 61 rows and original event indices.
+
+| Method | Parameters | Cluster sizes | Noise |
+| --- | --- | --- | --- |
+| DBSCAN | eps=0.1, min_samples=5 | 30, 30 | 1 (1.64%) |
+| DBSCAN | eps=0.000001, min_samples=5 | none | 61 (100%) |
+| DBSCAN | eps=100, min_samples=5 | 61 | 0 (0%) |
+| HDBSCAN | min_cluster_size=10, min_samples=5 | 30, 30 | 1 (1.64%) |
+
+On this fixture both methods recover the separated groups at the listed settings;
+DBSCAN also demonstrates excessive noise and merging as eps changes. This is a
+synthetic observation, not a recommended parameter set or biological validation.
+For the MVP retain both: DBSCAN gives explicit radius control and existing parameter
+experiments; HDBSCAN provides an alternative to inspect when radius selection is
+problematic. Neither fewer noise events nor more clusters alone establishes better
+populations. The fixture does not establish superiority on real FCS data, differing
+densities or large datasets; that choice requires representative files and manual
+inspection. No automatic winner or biological interpretation is assigned.
+
+### Verification
+
+- Existing Python regression suite: 19 tests passed, covering FCS loading, manual
+  gating, preprocessing, K-Means, DBSCAN/experiments and HDBSCAN.
+- Two additional Day 18 Python tests passed: same-data comparison, parameter effects,
+  event mapping, input preservation and all-noise results (21 Python tests in total).
+- Frontend: 12 tests passed, including identical complete payloads, independent
+  parameters, sequential calls, failures, mismatched mappings, stale requests,
+  validation and all-noise results.
+- `npm run lint` and `npm run build` passed, including Electron TypeScript.
+- Sandbox blocked Node child processes and Python temporary FCS access; affected
+  checks passed with permission outside the sandbox.
+
+Manual checklist: load a representative FCS file, prepare channels, run comparison,
+inspect table totals and gray noise, change shared axes, change each algorithm's
+parameters and rerun. Re-prepare data and open another file to check reset behavior;
+verify manual gating, saved populations and standalone clustering still work.
+Manual Electron GUI verification and representative FCS experiments remain pending,
+so Day 18 verification is partial. Comparison can be slow on large datasets because
+both complete analyses run sequentially.
