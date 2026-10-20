@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 17 is implemented and verified by automated tests and frontend build. Verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
+**Day 18 is implemented and verified by automated tests, lint and frontend build. Verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
 
 Current functionality includes:
 
@@ -66,10 +66,13 @@ Current functionality includes:
 - original versus colored cluster scatter comparison in original channel units;
 - DBSCAN on prepared data with configurable eps/min_samples, original event indices, cluster sizes and gray noise visualization.
 
-**Next roadmap step: Day 18 - DBSCAN vs HDBSCAN (only when requested).**
-
 - DBSCAN parameter experiments across eps/min_samples with summaries and selectable scatter results;
-- HDBSCAN on complete prepared data with configurable min_cluster_size/min_samples, original event indices, cluster sizes and gray noise visualization.
+- HDBSCAN on complete prepared data with configurable min_cluster_size/min_samples, original event indices, cluster sizes and gray noise visualization;
+- paired DBSCAN/HDBSCAN comparison on identical complete prepared data, cluster/noise/size summaries and shared-axis scatter plots.
+
+Day 18 automated checks: 21 Python tests across regression/comparison runs, 12 frontend tests, lint and build passed. Manual Electron and representative user FCS comparison remain outstanding; overall verification is partial.
+
+**Next roadmap step: Day 19 - Small Cluster Filtering (only when requested).**
 
 The roadmap is currently in README.md; Roadmap.md is absent.
 
