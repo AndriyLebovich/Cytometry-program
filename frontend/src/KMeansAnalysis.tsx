@@ -1,3 +1,5 @@
+import PopulationMinimum from './PopulationMinimum'
+import { filterSmallClusters, validPopulationMinimum } from './clusterFiltering'
 import { useEffect, useRef, useState } from 'react'
 import type { PreprocessedDataset } from './Preprocessing'
 import { parseMinSamples, runExperiments, summarizeExperiment } from './dbscanExperiments'
@@ -34,7 +36,7 @@ const color = (label: number, count: number) => label === -1 ? '#64748b' : `hsl(
 export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comparison }: {
   dataset: PreprocessedDataset
   algorithm?: 'kmeans' | 'dbscan' | 'hdbscan'
-  comparison?: { result: DBSCANResult | HDBSCANResult; x: number; y: number }
+  comparison?: { result: DBSCANResult | HDBSCANResult; x: number; y: number; minimum: number }
 }) {
   const name = algorithm === 'hdbscan' ? 'HDBSCAN' : algorithm === 'dbscan' ? 'DBSCAN' : 'K-Means'
   const [eps, setEps] = useState(0.5)
@@ -46,7 +48,10 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comp
   const [error, setError] = useState('')
   const [localX, setX] = useState(0)
   const [localY, setY] = useState(Math.min(1, dataset.channels.length - 1))
-  const result = comparison?.result ?? localResult
+  const [populationMinimum, setPopulationMinimum] = useState(1)
+  const originalResult = comparison?.result ?? localResult
+  const minimum = comparison?.minimum ?? populationMinimum
+  const result = originalResult ? filterSmallClusters(originalResult, validPopulationMinimum(minimum) ? minimum : 1) : null
   const x = comparison?.x ?? localX
   const y = comparison?.y ?? localY
   const [minimums, setMinimums] = useState('5, 10, 20')
@@ -126,8 +131,8 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comp
       const px = bounds[1] === bounds[0] ? 250 : 55 + (rawValue(row, x) - bounds[0]) / (bounds[1] - bounds[0]) * 390
       const py = bounds[3] === bounds[2] ? 147 : 280 - (rawValue(row, y) - bounds[2]) / (bounds[3] - bounds[2]) * 265
       return <circle key={index} cx={px} cy={py} r="2" opacity="0.65"
-        fill={colored && result ? color(result.labels[index], result.n_clusters) : '#64748b'}>
-        <title>Event {dataset.event_indices[index]}{colored && result ? result.labels[index] === -1 ? '; noise' : `; cluster ${result.labels[index] + 1}` : ''}</title>
+        fill={colored && result ? color(result.labels[index], originalResult!.n_clusters) : '#64748b'}>
+        <title>{`Event ${dataset.event_indices[index]}${colored && result ? result.labels[index] === -1 ? '; noise' : `; cluster ${result.labels[index] + 1}` : ''}`}</title>
       </circle>
     })}
     <text x="250" y="325" textAnchor="middle">{dataset.channels[x]}</text>
@@ -205,7 +210,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comp
               <td>{entry.eps}</td><td>{entry.min_samples}</td><td>{entry.n_clusters}</td>
               <td>{entry.noise_count}</td><td>{summary.noisePercent.toFixed(2)}</td>
               <td>{summary.smallest ?? 'None'}</td><td>{summary.smallClusters}</td><td>{summary.largestPercent.toFixed(2)}</td>
-              <td><button type="button" disabled={busy} aria-pressed={result === entry}
+              <td><button type="button" disabled={busy} aria-pressed={originalResult === entry}
                 onClick={() => setResult(entry)}>View</button></td>
             </tr>
           })}</tbody>
@@ -214,13 +219,17 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comp
     </section>}
     </>}
     {error && <p role="alert">{error}</p>}
+    {!comparison && <PopulationMinimum value={populationMinimum} onChange={setPopulationMinimum} />}
     {result && <>
       {result.algorithm === 'hdbscan' && <p>Displayed result: min_cluster_size {result.min_cluster_size}; min_samples {result.min_samples}.</p>}
       {result.algorithm === 'dbscan' && <p>Displayed result: eps {result.eps}; min_samples {result.min_samples}.</p>}
       <p>{result.labels.length.toLocaleString()} events analyzed; {result.n_clusters} detected clusters.
-        {result.algorithm === 'kmeans' ? ` Inertia: ${result.inertia.toPrecision(5)}.`
+        {result.algorithm === 'kmeans' ? ` Original fit inertia: ${result.inertia.toPrecision(5)}. Noise after size filtering: ${result.noise_count} events.`
           : ` Noise: ${result.noise_count.toLocaleString()} events (${(result.noise_count / result.labels.length * 100).toFixed(2)}%). Noise is shown in gray.`}</p>
-      <ul>{result.cluster_sizes.map((size, label) => <li key={label} style={{ color: color(label, result.n_clusters) }}>
+      <p>Size filtering: {result.removed_clusters} clusters reassigned; {result.reassigned_count} additional noise events.
+        Before filtering: {originalResult!.n_clusters} clusters, {originalResult!.labels.filter(label => label === -1).length} noise events.
+        Original cluster identifiers are preserved.</p>
+      <ul>{result.clusters.map(({ size, label }) => <li key={label} style={{ color: color(label, originalResult!.n_clusters) }}>
         Detected cluster {label + 1}: {size.toLocaleString()} events ({(size / result.labels.length * 100).toFixed(2)}%)
       </li>)}</ul>
       {!comparison && (['X', 'Y'] as const).map(axis => <label key={axis}>{axis} axis <select value={axis === 'X' ? x : y}

@@ -1,3 +1,5 @@
+import PopulationMinimum from './PopulationMinimum'
+import { filterSmallClusters, validPopulationMinimum } from './clusterFiltering'
 import { useEffect, useRef, useState } from 'react'
 import ClusteringAnalysis from './KMeansAnalysis'
 import type { PreprocessedDataset } from './Preprocessing'
@@ -10,6 +12,7 @@ export default function DensityComparison({ dataset }: { dataset: PreprocessedDa
   const [error, setError] = useState('')
   const [x, setX] = useState(0)
   const [y, setY] = useState(Math.min(1, dataset.channels.length - 1))
+  const [minimum, setMinimum] = useState(1)
   const revision = useRef(0)
   useEffect(() => () => { revision.current += 1 }, [])
   const run = async () => {
@@ -43,14 +46,15 @@ export default function DensityComparison({ dataset }: { dataset: PreprocessedDa
       }} /></label>)}
     <button type="button" disabled={busy || !dataset.retained_count || !validComparisonParameters(parameters)} onClick={run}>
       {busy ? 'Comparing...' : 'Compare DBSCAN and HDBSCAN'}</button>
+    <PopulationMinimum value={minimum} onChange={setMinimum} />
     {error && <p role="alert">{error}</p>}
     {result && <>
       <div className="table-container"><table>
         <thead><tr><th>Algorithm</th><th>Clusters</th><th>Noise events</th><th>Noise %</th><th>Cluster sizes (events / % of retained)</th></tr></thead>
-        <tbody>{[result.dbscan, result.hdbscan].map(entry => <tr key={entry.algorithm}>
+        <tbody>{[result.dbscan, result.hdbscan].map(source => filterSmallClusters(source, validPopulationMinimum(minimum) ? minimum : 1)).map(entry => <tr key={entry.algorithm}>
           <td>{entry.algorithm.toUpperCase()}</td><td>{entry.n_clusters}</td><td>{entry.noise_count}</td>
           <td>{(entry.noise_count / dataset.retained_count * 100).toFixed(2)}</td>
-          <td>{entry.cluster_sizes.map((size, index) => `#${index + 1}: ${size} / ${(size / dataset.retained_count * 100).toFixed(2)}%`).join('; ') || 'None'}</td>
+          <td>{entry.clusters.map(({ size, label }) => `#${label + 1}: ${size} / ${(size / dataset.retained_count * 100).toFixed(2)}%`).join('; ') || 'None'}</td>
         </tr>)}</tbody>
       </table></div>
       <p>Cluster numbers and colors are local to each algorithm; matching numbers do not identify matching populations.
@@ -60,8 +64,8 @@ export default function DensityComparison({ dataset }: { dataset: PreprocessedDa
         {dataset.channels.map((channel, index) => <option key={channel} value={index}>{channel}</option>)}
       </select></label>)}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
-        <div style={{ flex: '1 1 460px' }}><ClusteringAnalysis dataset={dataset} algorithm="dbscan" comparison={{ result: result.dbscan, x, y }} /></div>
-        <div style={{ flex: '1 1 460px' }}><ClusteringAnalysis dataset={dataset} algorithm="hdbscan" comparison={{ result: result.hdbscan, x, y }} /></div>
+        <div style={{ flex: '1 1 460px' }}><ClusteringAnalysis dataset={dataset} algorithm="dbscan" comparison={{ result: result.dbscan, x, y, minimum }} /></div>
+        <div style={{ flex: '1 1 460px' }}><ClusteringAnalysis dataset={dataset} algorithm="hdbscan" comparison={{ result: result.hdbscan, x, y, minimum }} /></div>
       </div>
       <p>For the MVP, DBSCAN offers an explicit radius for controlled parameter experiments. HDBSCAN is useful
         when one radius merges dense groups or loses sparse groups as noise. Retain both for inspection;
