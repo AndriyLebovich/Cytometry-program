@@ -1067,3 +1067,59 @@ verify manual gating, saved populations and standalone clustering still work.
 Manual Electron GUI verification and representative FCS experiments remain pending,
 so Day 18 verification is partial. Comparison can be slow on large datasets because
 both complete analyses run sequentially.
+
+## Day 19 - Small Cluster Filtering
+
+Implemented as reversible postprocessing of complete clustering assignments.
+Overall verification remains partial pending manual Electron checks and
+representative user FCS validation.
+
+### Reused implementation and behavior
+
+Existing algorithms already return complete event labels, original event indices
+and cluster sizes; scatter plots already render label `-1` as gray noise. Day 16
+counts clusters below 1% for experiments but does not filter them. Day 19 reuses
+these results and plots without rerunning Python, preprocessing or FCS loading.
+The pure TypeScript helper is independent of React; backend JSON is unchanged.
+
+Use **Minimum population size (events)** in a clustering panel or the shared
+DBSCAN/HDBSCAN comparison. Default `1` preserves the original result. A cluster
+with strictly fewer events than the threshold becomes noise; a cluster exactly
+at the threshold survives. Counts use every analyzed event, never the scatter
+sample. Existing noise remains noise and all event indices remain in order.
+Invalid thresholds show an error and temporarily display the unfiltered result.
+
+The filter applies to K-Means, DBSCAN, selected DBSCAN experiment results and
+HDBSCAN. Comparison uses one threshold for both methods and updates its table
+and both plots. Surviving cluster identifiers and colors stay stable; gaps in
+identifiers are intentional. The summary reports before/after counts and added
+noise. K-Means inertia continues to describe the original fit. Day 16 experiment
+tables retain original algorithm results; the selected scatter and its summary
+reflect the filter. Reset to `1` to restore assignments without recomputation.
+Preparing another dataset resets the filter through the existing component lifecycle.
+
+This is an optional size rule, separate from HDBSCAN `min_cluster_size`, not a
+biological validity test. Small groups can be relevant; no universally appropriate
+minimum is prescribed. Manual gating and saved population datasets are unchanged.
+No Day 20 pipeline or later roadmap work was introduced.
+
+### Verification
+
+- Frontend: 17 tests passed, including threshold boundaries, complete assignments,
+  unchanged inputs and event mapping, all-noise/empty/all-filtered cases, invalid
+  thresholds, reversibility and existing regression tests.
+- The actual React SVG renderer was checked for gray reassigned events, stable
+  survivor colors and identifiers, preserved points and restored output.
+- `npm run lint` and `npm run build` passed, including Electron TypeScript.
+- Node test/build child processes required execution outside the sandbox.
+- All 21 Python regression tests passed, including FCS loading, manual gating,
+  preprocessing, existing clustering and comparison. Temporary FCS access required
+  execution outside the sandbox.
+
+Manual checklist: load a representative FCS file and prepare data; run each
+algorithm and the paired comparison. Choose a threshold above a small cluster's
+size, verify gray points, table totals and added noise; check exact-size equality,
+all-filtered results and restoration with `1`. Select different experiment runs,
+change axes, prepare data again and open another file. Confirm manual gating,
+saved populations and standalone analysis still work. These manual Electron and
+representative FCS checks remain outstanding, so Day 19 verification is partial.
