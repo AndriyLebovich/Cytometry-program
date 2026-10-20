@@ -86,6 +86,7 @@ export default function Preprocessing({ file, channels }: { file: string; channe
       </>}
       <ClusteringAnalysis dataset={dataset} />
       <ClusteringAnalysis dataset={dataset} algorithm="dbscan" />
+      <ClusteringAnalysis dataset={dataset} algorithm="hdbscan" />
     </div>}
   </section>
 }
