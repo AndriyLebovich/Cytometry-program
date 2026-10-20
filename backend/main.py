@@ -3,7 +3,7 @@ import sys
 
 from core.commands import test_command
 from preprocessing import preprocess_fcs
-from clustering import cluster_kmeans, cluster_dbscan
+from clustering import cluster_kmeans, cluster_dbscan, cluster_hdbscan
 from fcs_reader import (
     read_fcs,
     read_scatter_data,
@@ -144,6 +144,16 @@ def main():
                     "success": False,
                     "message": str(error)
                 }
+
+    elif command == "hdbscan":
+        try:
+            result = cluster_hdbscan(
+                data.get("data"), data.get("event_indices"),
+                data.get("min_cluster_size"), data.get("min_samples"),
+            )
+            result["success"] = True
+        except Exception as error:
+            result = {"success": False, "message": str(error)}
 
     elif command == "dbscan":
         try:

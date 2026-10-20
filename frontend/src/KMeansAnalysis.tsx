@@ -17,14 +17,27 @@ interface KMeansResult {
 }
 
 
+interface HDBSCANResult {
+  success: true
+  algorithm: 'hdbscan'
+  min_cluster_size: number
+  min_samples: number
+  n_clusters: number
+  labels: number[]
+  event_indices: number[]
+  cluster_sizes: number[]
+  noise_count: number
+}
+
 const color = (label: number, count: number) => label === -1 ? '#64748b' : `hsl(${label * 360 / count}, 70%, 42%)`
 
-export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { dataset: PreprocessedDataset; algorithm?: 'kmeans' | 'dbscan' }) {
-  const name = algorithm === 'dbscan' ? 'DBSCAN' : 'K-Means'
+export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { dataset: PreprocessedDataset; algorithm?: 'kmeans' | 'dbscan' | 'hdbscan' }) {
+  const name = algorithm === 'hdbscan' ? 'HDBSCAN' : algorithm === 'dbscan' ? 'DBSCAN' : 'K-Means'
   const [eps, setEps] = useState(0.5)
   const [minSamples, setMinSamples] = useState(5)
+  const [minClusterSize, setMinClusterSize] = useState(5)
   const [count, setCount] = useState(2)
-  const [result, setResult] = useState<KMeansResult | DBSCANResult | null>(null)
+  const [result, setResult] = useState<KMeansResult | DBSCANResult | HDBSCANResult | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [x, setX] = useState(0)
@@ -42,11 +55,12 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
     try {
       const response = await window.electronAPI.runPython(algorithm, {
         data: dataset.data, event_indices: dataset.event_indices,
-        ...(algorithm === 'dbscan' ? { eps, min_samples: minSamples } : { n_clusters: count }),
+        ...(algorithm === 'hdbscan' ? { min_cluster_size: minClusterSize, min_samples: minSamples }
+          : algorithm === 'dbscan' ? { eps, min_samples: minSamples } : { n_clusters: count }),
       })
       if (current !== revision.current) return
       if (typeof response === 'object' && response !== null && 'success' in response && response.success === true) {
-        setResult(response as KMeansResult | DBSCANResult)
+        setResult(response as KMeansResult | DBSCANResult | HDBSCANResult)
       } else {
         throw new Error(typeof response === 'object' && response !== null && 'message' in response
           ? String(response.message) : `${name} failed`)
@@ -119,7 +133,9 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
 
   return <div>
     <h3>{name}{algorithm === 'kmeans' ? ' baseline' : ' density clustering'}</h3>
-    <p>{algorithm === 'dbscan'
+    <p>{algorithm === 'hdbscan'
+      ? 'HDBSCAN detects dense mathematical groups and marks noise in gray. Detected clusters are not biologically validated populations. min_cluster_size controls cluster extraction; min_samples controls density sensitivity. Both use the complete prepared dataset.'
+      : algorithm === 'dbscan'
       ? 'DBSCAN detects dense mathematical groups and marks other events as noise. Detected clusters are not biologically validated populations. eps uses the prepared dataset units.'
       : 'K-Means assigns every retained event to a mathematical cluster. It does not detect noise or validate biological populations.'}</p>
     {algorithm === 'kmeans' ? <label>Number of clusters <input disabled={busy} type="number" min="1" max={dataset.retained_count} value={count}
@@ -130,13 +146,18 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
         setError('')
         setBusy(false)
       }} /></label> : <>
-      <label>eps <input disabled={busy} type="number" min="0" step="any" value={eps} onChange={event => {
+      {algorithm === 'hdbscan' ? <label>min_cluster_size <input disabled={busy} type="number" min="2" step="1" value={minClusterSize}
+        onChange={event => {
+          setMinClusterSize(Number(event.target.value))
+          setResult(null)
+          setError('')
+        }} /></label> : <label>eps <input disabled={busy} type="number" min="0" step="any" value={eps} onChange={event => {
         revision.current += 1
         setEps(Number(event.target.value))
         setResult(null)
         setError('')
         setBusy(false)
-      }} /></label>
+      }} /></label>}
       <label>min_samples <input disabled={busy} type="number" min="1" step="1" value={minSamples} onChange={event => {
         revision.current += 1
         setMinSamples(Number(event.target.value))
@@ -145,7 +166,9 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
         setBusy(false)
       }} /></label>
     </>}
-    <button type="button" disabled={busy || dataset.retained_count === 0 || (algorithm === 'dbscan'
+    <button type="button" disabled={busy || dataset.retained_count === 0 || (algorithm === 'hdbscan'
+      ? !Number.isInteger(minClusterSize) || minClusterSize < 2 || !Number.isInteger(minSamples) || minSamples < 1
+      : algorithm === 'dbscan'
       ? !Number.isFinite(eps) || eps <= 0 || !Number.isInteger(minSamples) || minSamples < 1
       : !Number.isInteger(count) || count < 1 || count > dataset.retained_count)} onClick={run}>
       {busy ? 'Clustering…' : `Run ${name}`}
@@ -184,6 +207,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
     </section>}
     {error && <p role="alert">{error}</p>}
     {result && <>
+      {result.algorithm === 'hdbscan' && <p>Displayed result: min_cluster_size {result.min_cluster_size}; min_samples {result.min_samples}.</p>}
       {result.algorithm === 'dbscan' && <p>Displayed result: eps {result.eps}; min_samples {result.min_samples}.</p>}
       <p>{result.labels.length.toLocaleString()} events analyzed; {result.n_clusters} detected clusters.
         {result.algorithm === 'kmeans' ? ` Inertia: ${result.inertia.toPrecision(5)}.`
@@ -198,7 +222,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans' }: { 
       <p>Same events and axis ranges in original channel units. Showing {sampleSize.toLocaleString()} of {dataset.retained_count.toLocaleString()} retained events; clustering uses all retained events. Removed invalid events are excluded from both plots.</p>
       <div style={{ display: 'flex', flexWrap: 'wrap' }}>
         <div><h4>Original scatter (retained events)</h4>{plot(false)}</div>
-        <div><h4>{name} clusters{algorithm === 'dbscan' ? ' and noise' : ''}</h4>{plot(true)}</div>
+        <div><h4>{name} clusters{algorithm !== 'kmeans' ? ' and noise' : ''}</h4>{plot(true)}</div>
       </div>
     </>}
   </div>

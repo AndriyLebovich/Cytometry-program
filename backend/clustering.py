@@ -104,3 +104,31 @@ def _streaming_dbscan(matrix, tree, eps, min_samples):
             stack.extend(fresh[core[fresh]].tolist())
         cluster += 1
     return labels
+
+
+def cluster_hdbscan(data, event_indices, min_cluster_size, min_samples):
+    """Cluster the complete prepared matrix; -1 denotes noise, not removed events."""
+    for name, value, minimum in [("min_cluster_size", min_cluster_size, 2),
+                                 ("min_samples", min_samples, 1)]:
+        if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+            raise ValueError(f"{name} must be an integer >= {minimum}")
+    matrix = _validated_matrix(data, event_indices)
+    # A singleton cannot form a density cluster. Avoid the library's tree error.
+    if len(matrix) == 1:
+        labels = np.array([-1], dtype=np.intp)
+    else:
+        from hdbscan import HDBSCAN
+        labels = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples,
+                         metric="euclidean", cluster_selection_method="eom",
+                         core_dist_n_jobs=1).fit_predict(matrix)
+    cluster_labels, sizes = np.unique(labels[labels >= 0], return_counts=True)
+    return {
+        "algorithm": "hdbscan",
+        "min_cluster_size": min_cluster_size,
+        "min_samples": min_samples,
+        "n_clusters": len(cluster_labels),
+        "labels": labels.tolist(),
+        "event_indices": event_indices.copy(),
+        "cluster_sizes": sizes.tolist(),
+        "noise_count": int(np.count_nonzero(labels == -1)),
+    }
