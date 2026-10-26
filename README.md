@@ -1227,3 +1227,55 @@ frontend regression tests, lint and frontend build passed. Sandbox restrictions
 on temporary FCS access and Node child processes required rerunning checks outside
 the sandbox. Representative user FCS validation and manual Electron GUI checks
 remain outstanding, so overall verification is partial.
+
+## Day 22 - Node.js Launches Python
+
+`frontend/electron/analyzer.ts` exports `runAnalysis` for Node.js/Electron main
+process callers. It launches the existing Day 21 CLI using `child_process.spawn`
+and returns a Promise containing its unchanged complete JSON result. Existing
+`run-python` commands remain available. No new IPC/preload or React flow is added;
+that integration belongs to Day 23.
+
+After `npm run build` in `frontend`, a Node.js caller can use:
+
+```javascript
+import { runAnalysis } from './frontend/dist-electron/electron/analyzer.js'
+
+const result = await runAnalysis({
+  filePath: 'C:/data/sample.fcs',
+  channels: ['FSC-A', 'SSC-A'],
+  algorithm: 'dbscan',
+  parameters: { eps: 0.5, min_samples: 5 },
+  standardize: true,
+  minimumPopulationSize: 1,
+})
+```
+
+The request also supports K-Means `n_clusters` and HDBSCAN `min_cluster_size` /
+`min_samples`. Algorithm parameter defaults and validation remain owned by Python.
+The module resolves the repository and virtual-environment interpreter relative
+to its source/compiled location, sets the Python working directory explicitly,
+and accepts optional `{ pythonPath, projectRoot }` as its second argument.
+Relative FCS paths resolve from the calling Node process's working directory.
+Paths and channel names are separate arguments, with no shell interpolation.
+UTF-8 stdout/stderr are collected separately and parsed only after process close.
+
+Successful stderr diagnostics do not corrupt JSON. Spawn failures, nonzero exits
+and malformed/non-object JSON reject with `PythonAnalysisError`, including
+`exitCode`, `signal` and `stderr`. The result is typed `unknown` at this transport
+boundary; a future UI consumer must narrow it against the analyzer schema.
+Complete output is buffered in memory; large files may require substantial memory.
+No timeout or cancellation is introduced in this step.
+
+Automated verification covers actual Node -> Python CLI -> generated FCS analysis
+for all three algorithms, equality with direct CLI output, channel order, event
+mapping, scaling/filter options, paths with spaces and Unicode, exit codes 1/2,
+missing interpreter, chunked JSON, stderr diagnostics and invalid JSON.
+Manual Electron GUI checks and representative user FCS validation remain pending;
+overall verification is partial.
+
+Verification results: all 30 Python regression tests and all 19 Node/frontend
+tests passed; lint and frontend/Electron production build passed. A compiled
+module smoke check also reached the real Python CLI and received the expected
+missing-file analysis error. Sandbox initially blocked process spawning and
+temporary FCS access; affected checks passed outside the sandbox.
