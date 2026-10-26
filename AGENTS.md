@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 20 is implemented and verified by automated tests, lint and frontend build. Verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
+**Day 21 is implemented and verified by automated tests, lint and frontend build. Overall verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
 
 Current functionality includes:
 
@@ -75,7 +75,17 @@ Current functionality includes:
 
 Day 20 automated checks: 26 Python tests (including 5 analyzer tests and generated FCS integration), 17 frontend tests (including actual React SVG rendering), lint and build passed. Manual Electron and representative user FCS validation remain outstanding; overall verification is partial.
 
-**Next roadmap step: Day 21 - Python CLI (only when requested).**
+- independent Python CLI (`python -m backend.cli`) reusing the unified analyzer,
+  with file/channel/algorithm arguments, preprocessing and filtering settings,
+  strict JSON stdout, separate diagnostics and nonzero error exit codes.
+
+Day 21 automated checks: all 30 Python tests (including 4 CLI tests with actual
+subprocess runs and generated FCS analysis for all algorithms), all 17 frontend
+tests, lint and frontend build passed. Sandbox restrictions required rerunning
+Python and Node checks outside the sandbox. Manual Electron GUI verification and
+representative user FCS validation remain outstanding; overall verification is partial.
+
+**Next roadmap step: Day 22 - Node.js Launches Python (only when requested).**
 
 The roadmap is currently in README.md; Roadmap.md is absent.
 
