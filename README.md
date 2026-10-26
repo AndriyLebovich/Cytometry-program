@@ -1123,3 +1123,59 @@ all-filtered results and restoration with `1`. Select different experiment runs,
 change axes, prepare data again and open another file. Confirm manual gating,
 saved populations and standalone analysis still work. These manual Electron and
 representative FCS checks remain outstanding, so Day 19 verification is partial.
+
+## Day 20 - Unified Python Analyzer
+
+Implemented in `backend/analyzer.py` as an independent Python API. Existing
+preprocessing and all three clustering functions are reused. The frontend and
+its reversible Day 19 filtering remain unchanged. No Day 21 CLI or later UI
+integration is introduced.
+
+```python
+from backend.analyzer import analyze_fcs
+
+result = analyze_fcs(
+    "sample.fcs", ["FSC-A", "SSC-A"],
+    algorithm="dbscan", parameters={"eps": 0.5, "min_samples": 5},
+    standardize=True, minimum_population_size=10,
+)
+```
+
+Run/import from the repository root. The file is loaded once; all raw events
+are passed to existing channel selection, finite-row cleaning and optional
+StandardScaler. Clustering uses every retained row, never a scatter sample.
+Supported algorithms and defaults: `kmeans` (`n_clusters=2`), `dbscan`
+(`eps=0.5`, `min_samples=5`), `hdbscan` (`min_cluster_size=5`, `min_samples=5`).
+These are software defaults, not validated biological parameter recommendations.
+Unknown algorithms/parameters and invalid settings raise errors. Empty or entirely
+invalid selected data raise ValueError through existing clustering validation.
+File and library errors propagate to the caller rather than being hidden.
+
+The result contains:
+
+- `preprocessing`: complete prepared matrix, channels, scaler, counts and retained/
+  removed original indices;
+- `original_clustering`: unchanged algorithm result, including fit metadata;
+- `clustering`: filtered labels, original indices, cluster sizes and noise count;
+- `filtering`: threshold, removed cluster identifiers and reassigned count;
+- `statistics`: each surviving cluster and noise, with label, count, percentage
+  and Min/Max/Mean/Median for selected channels in original units.
+
+Filtering follows Day 19: sizes strictly below the threshold become `-1`; exact
+equality survives, existing noise remains noise and survivor identifiers are
+preserved. `statistics.clusters` explicitly associates identifiers with counts
+(identifiers may have gaps). Percentages use all retained events as denominator.
+Invalid rows are removed data, not noise. Empty noise has count/percentage zero
+and null channel statistics. Original labels and the complete prepared data remain
+available for further analysis. Results support strict JSON serialization;
+non-finite statistics raise an error. Detected clusters are mathematical groups,
+not biologically validated populations.
+
+Verification: all 26 Python tests (21 existing plus 5 analyzer tests) and all 17
+frontend regression tests passed; lint and frontend build passed. Tests include
+generated FCS loading, one-load behavior, standalone algorithm equivalence,
+cleaning/mapping, original-unit statistics, filtering boundaries, original result
+preservation, empty/all-noise/all-filtered cases and invalid inputs. Sandbox blocked
+temporary FCS access and Node child processes; affected checks passed outside it.
+Manual Electron GUI checks and representative user FCS validation remain pending,
+so overall Day 20 verification is partial. The new API is not yet exposed in UI.

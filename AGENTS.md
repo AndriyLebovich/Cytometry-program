@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 19 is implemented and verified by automated tests, lint and frontend build. Verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
+**Day 20 is implemented and verified by automated tests, lint and frontend build. Verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
 
 Current functionality includes:
 
@@ -71,9 +71,11 @@ Current functionality includes:
 - paired DBSCAN/HDBSCAN comparison on identical complete prepared data, cluster/noise/size summaries and shared-axis scatter plots.
 - reversible minimum population size filtering on complete clustering assignments, including a shared comparison threshold, updated noise summaries and gray filtered points; original assignments, event indices and survivor identifiers/colors are preserved.
 
-Day 19 automated checks: 21 Python regression/comparison tests, 17 frontend tests (including actual React SVG rendering), lint and build passed. Manual Electron and representative user FCS validation remain outstanding; overall verification is partial.
+- independent unified Python analyzer (`backend.analyzer.analyze_fcs`) with one FCS load, reused preprocessing/clustering, original and filtered assignments, preserved event mapping and original-unit cluster/noise statistics; UI integration is not part of Day 20.
 
-**Next roadmap step: Day 20 - Unified Python Analyzer (only when requested).**
+Day 20 automated checks: 26 Python tests (including 5 analyzer tests and generated FCS integration), 17 frontend tests (including actual React SVG rendering), lint and build passed. Manual Electron and representative user FCS validation remain outstanding; overall verification is partial.
+
+**Next roadmap step: Day 21 - Python CLI (only when requested).**
 
 The roadmap is currently in README.md; Roadmap.md is absent.
 
