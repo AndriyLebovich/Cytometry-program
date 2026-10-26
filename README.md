@@ -1179,3 +1179,51 @@ preservation, empty/all-noise/all-filtered cases and invalid inputs. Sandbox blo
 temporary FCS access and Node child processes; affected checks passed outside it.
 Manual Electron GUI checks and representative user FCS validation remain pending,
 so overall Day 20 verification is partial. The new API is not yet exposed in UI.
+
+## Day 21 - Python CLI
+
+`backend/cli.py` provides a thin terminal interface to the existing Day 20
+`analyze_fcs` API. It reuses loading, preprocessing, clustering, filtering and
+statistics without duplicating them. Existing Electron commands are preserved.
+Run from the repository root with the project's Python environment:
+
+```powershell
+.\venv\Scripts\python.exe -m backend.cli "C:\data\sample.fcs" --channels FSC-A SSC-A --algorithm dbscan --eps 0.5 --min-samples 5
+.\venv\Scripts\python.exe -m backend.cli "C:\data\sample.fcs" --channels FSC-A SSC-A --algorithm kmeans --n-clusters 2 --no-standardize
+.\venv\Scripts\python.exe -m backend.cli "C:\data\sample.fcs" --channels FSC-A SSC-A --algorithm hdbscan --min-cluster-size 5 --min-samples 5 --minimum-population-size 10
+.\venv\Scripts\python.exe -m backend.cli --help
+```
+
+The file argument and `--channels` are required. Quote file paths and channel
+names containing spaces. Channel order is preserved. Defaults are identical to
+the Python API: DBSCAN, standardization enabled, minimum population size 1 and
+the selected algorithm's existing parameter defaults. `--standardize` and
+`--no-standardize` explicitly enable/disable scaling. Parameters belonging to a
+different algorithm are rejected. These defaults are not biological guidance.
+
+Process contract for a future Node.js caller:
+
+- Exit `0`: stdout contains exactly one strict JSON result followed by a newline,
+  with the unchanged Day 20 result structure (complete data and event mapping).
+- Exit `1`: analysis/import/serialization failure; stdout is empty and stderr
+  contains a JSON error with `success: false` and `message`. Library diagnostics
+  may also appear on stderr; consume results only on exit `0`.
+- Exit `2`: invalid command-line syntax or incompatible algorithm flags;
+  argparse writes usage and an error to stderr, leaving stdout empty.
+- `--help` writes human-readable help to stdout and exits `0`.
+
+Dependency diagnostics are redirected to stderr. JSON is serialized completely
+with `allow_nan=False` before stdout is written, preventing partial success
+output on serialization failure. Capture stdout/stderr separately and pass
+arguments as an array when adding the Node.js caller in Day 22. The CLI returns
+the complete analysis and can produce large output; no export or sampling stage
+is added here. Node.js/Electron integration is outside Day 21.
+
+Verification: all 30 Python tests passed, including 4 CLI tests covering argument
+validation, option forwarding, isolated stdout, strict serialization failure,
+missing files, invalid analysis settings and real subprocess analysis of generated
+FCS data with all three algorithms, compared with direct API results. All 17
+frontend regression tests, lint and frontend build passed. Sandbox restrictions
+on temporary FCS access and Node child processes required rerunning checks outside
+the sandbox. Representative user FCS validation and manual Electron GUI checks
+remain outstanding, so overall verification is partial.
