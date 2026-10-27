@@ -1,3 +1,4 @@
+import { handleAnalysis } from './analysisIpc.js';
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -90,6 +91,8 @@ ipcMain.handle(
     });
   }
 );
+
+ipcMain.handle("analyze-fcs", (_event, request: unknown) => handleAnalysis(request));
 
 console.log("ELECTRON MAIN PROCESS STARTED");
 

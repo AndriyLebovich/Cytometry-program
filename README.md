@@ -1279,3 +1279,43 @@ tests passed; lint and frontend/Electron production build passed. A compiled
 module smoke check also reached the real Python CLI and received the expected
 missing-file analysis error. Sandbox initially blocked process spawning and
 temporary FCS access; affected checks passed outside the sandbox.
+
+## Day 23 - Electron IPC
+
+The React `Unified file analysis` panel sends the loaded FCS path, selected
+channels, algorithm and standardization setting through
+`window.electronAPI.analyzeFcs(request)`. It shows a busy state, errors and the
+complete JSON result. Algorithm parameters use Python defaults in this panel;
+the typed bridge also accepts the existing algorithm parameters and minimum
+population size. Automatic cluster visualization belongs to Day 24.
+
+The fixed `analyze-fcs` IPC handler validates the untrusted payload (including
+allowed keys and algorithm-specific parameter names) before reusing Day 22
+`runAnalysis`. Python retains numerical/domain validation. No Python launcher,
+preprocessing or clustering implementation is duplicated. The existing
+`run-python`, file selection, manual gating and clustering tools remain available.
+The preload exposes the dedicated method without exposing raw IPC, interpreter
+selection or process options; context isolation remains enabled.
+
+The shared `AnalysisRequest` / `AnalysisResponse` contract uses a cloneable envelope:
+`{ success: true, result }` or `{ success: false, error: { message, exitCode,
+signal, stderr } }`. Complete analyzer JSON is unchanged inside `result`, typed
+`unknown` at this transport boundary. React only renders JSON here; later
+visualization consumers must validate/narrow its schema. The error envelope
+preserves diagnostics that Electron would discard from custom Error objects.
+Output remains buffered in memory; timeout and cancellation are not added.
+
+Run `npm run build`, then `npm test` and `npm run lint` inside `frontend`.
+The new IPC tests use compiled Electron modules and therefore require the build.
+Tests cover the compiled preload with an Electron mock, existing bridge methods,
+rejected payloads, cloneable diagnostics and real generated-FCS analysis through
+the IPC handler for all three algorithms. They do not launch an Electron window.
+For manual verification, start `npm run dev` and `npm run electron` in separate
+frontend terminals, load an FCS file, select channels in `Unified file analysis`,
+and run each algorithm; check JSON, loading/error behavior and existing manual gates.
+
+Day 23 verification: all 30 Python tests, all 23 Node/frontend tests, lint and
+frontend/Electron production build passed. Sandbox initially blocked process
+spawning and temporary FCS access; affected checks passed outside it. Manual
+Electron GUI and representative user FCS validation remain outstanding, so
+overall verification is partial.

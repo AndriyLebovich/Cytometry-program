@@ -1,3 +1,5 @@
+import UnifiedAnalysis from './UnifiedAnalysis'
+import type { AnalysisRequest, AnalysisResponse } from './analysisContract'
 import { useMemo, useRef, useState } from 'react'
 import { createSelectedPopulation, savePopulation, buildPopulationStatistics, buildPopulationHistogram } from './population'
 import type { SelectedEvent, SelectedPopulation, SavedPopulation, PopulationGate } from './population'
@@ -7,6 +9,7 @@ import Preprocessing from './Preprocessing'
 declare global {
   interface Window {
     electronAPI: {
+      analyzeFcs: (request: AnalysisRequest) => Promise<AnalysisResponse>
       runPython: (
         command: string,
         data?: unknown
@@ -1106,6 +1109,7 @@ const maxGateHistogramCount =
             ))}
           </section>
 
+          <UnifiedAnalysis key={`analysis-${fcsResult.file}`} file={fcsResult.file} channels={fcsResult.channels} />
           <Preprocessing key={fcsResult.file} file={fcsResult.file} channels={fcsResult.channels} />
 
           <section className="channels">

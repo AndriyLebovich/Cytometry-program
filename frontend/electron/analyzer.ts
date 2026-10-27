@@ -2,17 +2,8 @@ import { spawn } from 'node:child_process'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-type AlgorithmOptions =
-  | { algorithm: 'kmeans'; parameters?: { n_clusters?: number } }
-  | { algorithm: 'dbscan'; parameters?: { eps?: number; min_samples?: number } }
-  | { algorithm: 'hdbscan'; parameters?: { min_cluster_size?: number; min_samples?: number } }
-
-export type AnalysisRequest = AlgorithmOptions & {
-  filePath: string
-  channels: string[]
-  standardize?: boolean
-  minimumPopulationSize?: number
-}
+import type { AnalysisRequest } from '../src/analysisContract.js'
+export type { AnalysisRequest } from '../src/analysisContract.js'
 
 export class PythonAnalysisError extends Error {
   readonly exitCode: number | null
