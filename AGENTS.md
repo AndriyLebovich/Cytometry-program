@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 21 is implemented and verified by automated tests, lint and frontend build. Overall verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
+**Day 23 is implemented and verified by automated tests, lint and frontend build. Overall verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
 
 Current functionality includes:
 
@@ -85,7 +85,32 @@ tests, lint and frontend build passed. Sandbox restrictions required rerunning
 Python and Node checks outside the sandbox. Manual Electron GUI verification and
 representative user FCS validation remain outstanding; overall verification is partial.
 
-**Next roadmap step: Day 22 - Node.js Launches Python (only when requested).**
+- Node.js/main-process `runAnalysis` launches the existing unified CLI with spawn,
+  passes file/channels/algorithm/settings and receives complete parsed JSON;
+  process errors, exit codes and malformed output produce structured Error objects.
+  Existing command bridge is preserved; new IPC/UI integration is outside Day 22.
+
+Day 22 automated checks: all 30 Python tests, all 19 Node/frontend tests, lint
+and frontend/Electron build passed. Real Node -> Python generated FCS analysis
+covers all three algorithms; compiled-module launch was also checked. Sandbox
+process/temp-file restrictions required rerunning affected checks outside it.
+Manual Electron GUI and representative user FCS validation remain outstanding;
+overall verification is partial.
+
+- Day 23 dedicated `analyze-fcs` IPC and typed preload `analyzeFcs` method
+  reuse Day 22 `runAnalysis`, validate renderer requests and return cloneable
+  success/error envelopes with Python diagnostics. React can launch file analysis
+  and inspect complete JSON; existing manual workflows remain available.
+
+Day 23 automated checks: all 30 Python tests, all 23 Node/frontend tests,
+lint and frontend/Electron production build passed. New tests cover compiled
+preload (Electron mocked), IPC validation/diagnostics and real Python analysis
+for all three algorithms. Tests do not launch an Electron window. Sandbox
+process/temp-file restrictions required rerunning affected checks outside it.
+Manual Electron GUI and representative user FCS validation remain outstanding;
+overall verification is partial.
+
+**Next roadmap step: Day 24 - Automatic Cluster Visualization (only when requested).**
 
 The roadmap is currently in README.md; Roadmap.md is absent.
 

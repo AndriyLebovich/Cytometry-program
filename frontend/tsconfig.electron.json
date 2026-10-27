@@ -12,6 +12,7 @@
    },
    "include": [
    "./electron/main.ts",
+   "./electron/analyzer.ts",
    "./electron/preload.cts"
 ]
 }

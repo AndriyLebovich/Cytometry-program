@@ -1,3 +1,4 @@
+import { handleAnalysis } from './analysisIpc.js';
 import { app, BrowserWindow, ipcMain, dialog } from "electron";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -70,6 +71,7 @@ ipcMain.handle("run-python", (_, request) => {
         });
     });
 });
+ipcMain.handle("analyze-fcs", (_event, request) => handleAnalysis(request));
 console.log("ELECTRON MAIN PROCESS STARTED");
 app.whenReady().then(() => {
     createWindow();
