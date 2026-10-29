@@ -69,6 +69,14 @@ test('IPC handler returns complete real Python analysis and file errors', async 
       assert.deepEqual(response.result.statistics.channels, ['B', 'A'])
       assert.equal(response.result.clustering.algorithm, algorithm)
       assert.equal(response.result.clustering.labels.length, 4)
+      const { parseClusterView } = await import('../src/clusterView.ts')
+      const view = parseClusterView(response.result)
+      assert.deepEqual(view.indices, [0, 1, 2, 3])
+      assert.deepEqual(view.labels, response.result.clustering.labels)
+      view.data.forEach((row, i) => {
+        assert.ok(Math.abs(row[0] - [100, 101, 300, 301][i]) < 1e-9)
+        assert.ok(Math.abs(row[1] - [10, 11, 30, 31][i]) < 1e-9)
+      })
     }
     const response = await handleAnalysis({ ...request, filePath: path.join(directory, 'missing.fcs') })
     assert.equal(response.success, false)

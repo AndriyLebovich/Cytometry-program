@@ -1,3 +1,4 @@
+import { clusterColor as color } from './clusterColor'
 import PopulationMinimum from './PopulationMinimum'
 import { filterSmallClusters, validPopulationMinimum } from './clusterFiltering'
 import { useEffect, useRef, useState } from 'react'
@@ -31,7 +32,6 @@ export interface HDBSCANResult {
   noise_count: number
 }
 
-const color = (label: number, count: number) => label === -1 ? '#64748b' : `hsl(${label * 360 / count}, 70%, 42%)`
 
 export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comparison }: {
   dataset: PreprocessedDataset
