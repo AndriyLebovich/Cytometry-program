@@ -40,7 +40,7 @@ Do not assume that an item from `Roadmap.md` is already implemented just because
 
 ## Current State
 
-**Day 23 is implemented and verified by automated tests, lint and frontend build. Overall verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
+**Day 25 is implemented and verified by automated tests, lint and frontend build. Overall verification is partial: manual Electron GUI verification and representative user FCS validation remain outstanding.**
 
 Current functionality includes:
 
@@ -110,7 +110,32 @@ process/temp-file restrictions required rerunning affected checks outside it.
 Manual Electron GUI and representative user FCS validation remain outstanding;
 overall verification is partial.
 
-**Next roadmap step: Day 24 - Automatic Cluster Visualization (only when requested).**
+- Day 24 connects unified analyzer results to a validated automatic cluster viewer,
+  with original-unit axes, stable cluster colors, gray noise, complete counts,
+  original event tooltips and separate population inspection without recomputation.
+
+Day 24 automated checks: all 30 Python tests, all 26 Node/React tests, lint and
+frontend/Electron production build passed. Generated FCS results from all three
+algorithms are checked through Python/IPC and the visualization adapter; SVG
+rendering covers mappings, colors, sampling and edge cases. Manual Electron GUI
+and representative user FCS validation remain outstanding; overall verification
+is partial.
+
+- Day 25 combines current/saved manual populations and automatic clusters/noise
+  in a shared file-scoped workflow using existing complete datasets. Shared
+  descriptors retain source, method, channels, percentage denominator and gate
+  boundaries/original automatic event indices for future comparison. Manual
+  records lack original indices; overlap metrics are not implemented.
+
+Day 25 automated checks: all 30 Python tests, all 27 Node/React tests, lint
+(no warnings) and frontend/Electron production build passed. Tests cover shared
+rendering, original-unit statistics, independent memberships, clear/reset data
+semantics and cross-file rejection. Sandbox process/temp-file restrictions
+required affected checks outside the sandbox. Manual Electron GUI and
+representative user FCS validation remain outstanding; overall verification
+is partial.
+
+**Next roadmap step: Day 26 - Statistics Panel (only when requested).**
 
 The roadmap is currently in README.md; Roadmap.md is absent.
 

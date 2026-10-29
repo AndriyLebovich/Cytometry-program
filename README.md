@@ -1319,3 +1319,82 @@ frontend/Electron production build passed. Sandbox initially blocked process
 spawning and temporary FCS access; affected checks passed outside it. Manual
 Electron GUI and representative user FCS validation remain outstanding, so
 overall verification is partial.
+
+
+## Day 24 - Automatic Cluster Visualization
+
+The existing `Unified file analysis` result now feeds an automatic population
+viewer. No additional FCS load, preprocessing or clustering is performed.
+Existing standalone clustering, manual gating and saved populations are preserved;
+Day 25 integration is described below.
+
+The viewer validates the consumed JSON fields, finite matrix/scaler dimensions,
+cluster labels and exact original-event mapping before plotting. It uses the
+analyzer's filtered assignments and restores original channel units from the
+returned scaler. Invalid data produce a visible error; complete JSON remains
+available in a collapsed details panel.
+
+A table identifies clusters by their original zero-based labels, including gaps,
+and noise by label -1, with complete event counts and percentages of retained
+events. Colors reuse the existing clustering color function; noise is gray.
+Use View cluster, View noise or View all events to inspect populations separately.
+X/Y selectors use analyzed channels (a single channel can serve both axes).
+Point tooltips show original event indices, labels and original-unit coordinates.
+Detected clusters are mathematical groups requiring biological validation.
+
+Each view samples at most 2000 matching events deterministically; selecting a
+small population samples within that population so it remains inspectable.
+Counts always use all assignments. Axis ranges and cluster colors stay fixed
+when changing the inspected population. Removed invalid rows are excluded and
+are not reported as noise. The complete analysis remains in memory and JSON;
+large inputs still carry the existing IPC/memory cost.
+
+Verification: 30 Python tests, 26 Node/React tests, lint and the frontend/Electron
+production build passed. Tests cover actual React SVG output, original-unit
+coordinates, stable colors/ranges, noise and separate cluster views, complete
+counts versus sampling, empty/all-noise/single-channel/constant data and rejected
+malformed mappings. Generated FCS results for all three algorithms pass through
+the real Python/IPC path and the visualization adapter. Sandbox process and
+temporary-file restrictions required affected checks outside the sandbox.
+
+Manual checklist: start Electron, load a representative user FCS, select channels
+in Unified file analysis and run each algorithm. Inspect cluster/noise counts,
+point tooltips, separate views and X/Y changes. Rerun with other channels, open
+another file and check reset/error/loading behavior. Confirm manual gates, saved
+populations and older clustering panels still work. Manual Electron GUI and
+representative user FCS validation remain outstanding, so overall Day 24
+verification is partial.
+
+## Day 25 - Manual Gating + Automatic Clustering
+
+Automated verification: all 30 Python tests, all 27 Node/React tests, lint without
+warnings and frontend/Electron production build passed. Sandbox restrictions
+required running process/temp-file-dependent checks outside the sandbox.
+
+Both existing detection paths now feed a shared population workflow inside
+Unified file analysis. Apply a manual gate, optionally save it, and run automatic
+analysis for the same open file. Expand current/saved manual populations,
+detected clusters and noise to inspect their channel statistics in original units.
+Existing manual plots, histograms, saved collections and automatic scatter views
+are reused and remain available. This adds no FCS loads or clustering calls.
+
+The shared `WorkflowPopulation` adapter records method, source file, channels,
+membership and percentage denominator. Manual percentages refer to file events;
+automatic percentages refer to retained events. It rejects cross-file results.
+Clearing a gate removes only the current manual selection; saved populations and
+the automatic result remain. Opening a file resets the session; changing automatic
+settings clears that automatic result without clearing manual selections.
+
+For future comparisons, manual descriptors preserve gate boundaries and automatic
+descriptors preserve original event indices, including noise. Manual event records
+currently lack original indices, explicitly represented as null. No event overlap
+metric or biological equivalence is inferred from record positions or coordinates.
+Statistics use complete populations, independently of scatter sampling. Automatic
+statistics reuse the existing statistics helper on reconstructed original-unit data;
+the original analyzer result and complete manual event records remain untouched.
+
+Manual verification remains outstanding: in Electron, open a representative FCS,
+apply and save a gate, run each automatic algorithm, and inspect both result types.
+Clear/reapply the gate, change manual axes and automatic settings, then open another
+file. Confirm saved populations and automatic results remain independent and reset
+with the file session. Overall verification is partial until these checks pass.
