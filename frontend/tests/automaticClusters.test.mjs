@@ -55,13 +55,42 @@ test('shared workflow preserves independent manual and automatic memberships and
   assert.deepEqual(workflowPopulations('new.fcs', null, null, []), [])
   assert.throws(() => workflowPopulations('new.fcs', current, gate, []), /another file/)
   assert.throws(() => workflowPopulations('new.fcs', null, null, [], result), /another file/)
-  const html = renderToStaticMarkup(createElement(PopulationWorkflow, { file: 'sample.fcs', manual: { current, gate, saved }, result }))
+  const html = renderToStaticMarkup(createElement(PopulationWorkflow, { file: 'sample.fcs', totalEvents: 10, manual: { current, gate, saved }, result }))
   assert.match(html, /Saved gate/)
   assert.match(html, /Detected cluster 3/)
   assert.match(html, /Noise \(-1\)/)
   assert.match(html, /10.00% of 10 file events/)
   assert.match(html, /33.33% of 3 retained events/)
+  assert.match(html, /Total file events: 10/)
+  assert.match(html, /Automatically detected clusters: 2/)
+  assert.match(html, /Removed during preprocessing: 7/)
+  assert.match(html, /Population counts and percentages/)
   assert.equal(workflowPopulations('sample.fcs', createSelectedPopulation('sample.fcs', 0, ['A'], []), gate, [])[0].count, 0)
+})
+
+test('statistics panel distinguishes absent results, empty selections and zero noise', async () => {
+  const { default: Panel } = await import('../src/PopulationWorkflow.tsx')
+  const { createSelectedPopulation } = await import('../src/population.ts')
+  const props = { file: 'sample.fcs', totalEvents: 0, manual: { current: null, gate: null, saved: [] } }
+  const render = p => renderToStaticMarkup(createElement(Panel, p))
+  assert.match(render(props), /Total file events: 0/)
+  assert.match(render(props), /Automatic analysis has not been run/)
+  assert.match(render(props), /No current manual selection/)
+  const result = { ...fixture(), source_file: props.file }
+  result.clustering.labels = [3, 3, 3]
+  const html = render({ ...props, totalEvents: 10, result })
+  assert.match(html, /Automatically detected clusters: 1/)
+  assert.match(html, /100.00%/)
+  assert.match(html, /Noise \(-1\)<\/th><td>noise<\/td><td>0<\/td><td>0.00%/)
+  assert.match(html, /No finite channel values; statistics unavailable/)
+  result.clustering.labels = [-1, -1, -1]
+  assert.match(render({ ...props, totalEvents: 10, result }), /Automatically detected clusters: 0/)
+  const current = createSelectedPopulation(props.file, 0, ['A'], [])
+  const gate = { xChannel: 'A', yChannel: 'A', xMin: 0, xMax: 1, yMin: 0, yMax: 1 }
+  const empty = render({ ...props, manual: { current, gate, saved: [] } })
+  assert.match(empty, /Current manual selection/)
+  assert.doesNotMatch(empty, /NaN|Infinity/)
+  assert.match(render({ ...props, result: { ...result, source_file: 'other.fcs' } }), /role="alert"/)
 })
 test('complete filtered labels map to original coordinates and preserve input', () => {
   const input = fixture(), before = structuredClone(input), view = parseClusterView(input)
