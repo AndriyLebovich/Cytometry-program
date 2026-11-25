@@ -4,7 +4,7 @@ import PopulationWorkflow from './PopulationWorkflow'
 import type { ManualWorkflow } from './PopulationWorkflow'
 import type { AnalysisRequest, AnalysisResponse } from './analysisContract'
 
-export default function UnifiedAnalysis({ file, channels, manual }: { file: string; channels: string[]; manual: ManualWorkflow }) {
+export default function UnifiedAnalysis({ file, totalEvents, channels, manual }: { file: string; totalEvents: number; channels: string[]; manual: ManualWorkflow }) {
   const [selected, setSelected] = useState<string[]>([])
   const [algorithm, setAlgorithm] = useState<AnalysisRequest['algorithm']>('dbscan')
   const [standardize, setStandardize] = useState(true)
@@ -21,7 +21,7 @@ export default function UnifiedAnalysis({ file, channels, manual }: { file: stri
   }
   return <section>
     <h2>Unified file analysis</h2>
-    <PopulationWorkflow file={file} manual={manual} result={response?.success ? response.result : undefined} />
+    <PopulationWorkflow file={file} totalEvents={totalEvents} manual={manual} result={response?.success ? response.result : undefined} />
     <fieldset disabled={busy}>
       <legend>Analysis channels</legend>
       {channels.map(channel => <label key={channel} style={{ marginRight: 12 }}>

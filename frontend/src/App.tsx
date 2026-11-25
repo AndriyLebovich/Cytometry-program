@@ -1110,6 +1110,7 @@ const maxGateHistogramCount =
           </section>
 
           <UnifiedAnalysis key={`analysis-${fcsResult.file}`} file={fcsResult.file} channels={fcsResult.channels}
+            totalEvents={fcsResult.events}
             manual={{ current: selectedPopulation, gate: populationGate, saved: populations }} />
           <Preprocessing key={fcsResult.file} file={fcsResult.file} channels={fcsResult.channels} />
 
