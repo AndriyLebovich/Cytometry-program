@@ -1,3 +1,4 @@
+import { statisticsCsv, clusteringCsv, download } from './exports'
 import { useMemo } from 'react'
 import { workflowPopulations } from './workflowPopulations'
 import type { PopulationGate, SelectedPopulation, SavedPopulation } from './population'
@@ -14,10 +15,19 @@ export default function PopulationWorkflow({ file, totalEvents, manual, result }
     try { return { rows: workflowPopulations(file, current, gate, saved, result), error: '' } }
     catch (error) { return { rows: [], error: String(error) } }
   }, [file, current, gate, saved, result])
+  const exportCsv = (kind: 'statistics' | 'clustering') => {
+    try {
+      const content = kind === 'statistics' ? statisticsCsv(state.rows) : clusteringCsv(result)
+      download(new Blob([content], { type: 'text/csv;charset=utf-8' }), `${kind}.csv`)
+    } catch (error) { window.alert(`Export failed: ${String(error)}`) }
+  }
   const automatic = state.rows.filter(row => row.method === 'automatic')
   const noise = state.rows.find(row => row.method === 'noise')
   return <section><h3>Statistics panel</h3>
     <p>Source: {file}. Apply a manual gate above or run file analysis below. Both results remain available independently.</p>
+    <p><button disabled={!!state.error || !state.rows.length} onClick={() => exportCsv('statistics')}>Export statistics CSV</button>{' '}
+      <button disabled={!!state.error || result === undefined} onClick={() => exportCsv('clustering')}>Export clustering CSV</button></p>
+    <p>CSV uses complete populations and assignments; scatter PNG preserves the displayed sample.</p>
     <p>Total file events: {totalEvents}</p>
     <p>Manual percentages use all file events; automatic percentages use retained events after preprocessing. Populations may overlap; counts must not be added. Detected clusters require biological validation.</p>
     {state.error && <p role="alert">Cannot combine populations: {state.error}</p>}

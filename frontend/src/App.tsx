@@ -1,3 +1,4 @@
+import ScatterExport from './ScatterExport'
 import UnifiedAnalysis from './UnifiedAnalysis'
 import type { AnalysisRequest, AnalysisResponse } from './analysisContract'
 import { useMemo, useRef, useState } from 'react'
@@ -595,7 +596,7 @@ const maxGateHistogramCount =
     </h2>
 
     <div className="scatter-container">
-      <svg
+      <ScatterExport><svg
         className="scatter-plot"
         viewBox="0 0 800 540"
         preserveAspectRatio="none"
@@ -789,7 +790,7 @@ const maxGateHistogramCount =
             </>
           )
         })()}
-      </svg>
+      </svg></ScatterExport>
       {gate && (
             <div className="gate-actions">
               <button

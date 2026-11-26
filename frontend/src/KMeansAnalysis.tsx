@@ -1,3 +1,4 @@
+import ScatterExport from './ScatterExport'
 import { clusterColor as color } from './clusterColor'
 import PopulationMinimum from './PopulationMinimum'
 import { filterSmallClusters, validPopulationMinimum } from './clusterFiltering'
@@ -123,7 +124,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comp
   }, [Infinity, -Infinity, Infinity, -Infinity])
   const sampleSize = Math.min(2000, dataset.data.length)
   const rows = Array.from({ length: sampleSize }, (_, index) => Math.floor(index * dataset.data.length / sampleSize))
-  const plot = (colored: boolean) => <svg viewBox="0 0 460 330" role="img"
+  const plot = (colored: boolean) => <ScatterExport><svg viewBox="0 0 460 330" role="img"
     aria-label={colored ? `${name} clusters` : 'Original retained events'} style={{ width: '100%', maxWidth: 460 }}>
     <path d="M55 15 V280 H445" fill="none" stroke="currentColor" />
     {rows.map(index => {
@@ -141,7 +142,7 @@ export default function ClusteringAnalysis({ dataset, algorithm = 'kmeans', comp
     <text x="445" y="300" textAnchor="end" fontSize="10">{bounds[1].toPrecision(4)}</text>
     <text x="50" y="280" textAnchor="end" fontSize="10">{bounds[2].toPrecision(3)}</text>
     <text x="50" y="20" textAnchor="end" fontSize="10">{bounds[3].toPrecision(3)}</text>
-  </svg>
+  </svg></ScatterExport>
 
   return <div>
     <h3>{name}{algorithm === 'kmeans' ? ' baseline' : ' density clustering'}</h3>
