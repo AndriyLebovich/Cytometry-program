@@ -1,3 +1,4 @@
+import ScatterExport from './ScatterExport'
 import { useState } from 'react'
 import { clusterColor } from './clusterColor'
 import { parseClusterView, visibleRows } from './clusterView'
@@ -8,7 +9,7 @@ export function ClusterScatter({ view, x, y, population = 'all' }: { view: Clust
   const bounds = view.data.reduce((b, row) => [Math.min(b[0], row[x]), Math.max(b[1], row[x]), Math.min(b[2], row[y]), Math.max(b[3], row[y])], [Infinity, -Infinity, Infinity, -Infinity])
   if (!view.data.length) return <p>No retained events.</p>
   return <><p>Showing {rows.length} of {total} matching events; {view.data.length} retained events in total. Counts use complete assignments. Axes use original channel units and shared ranges.</p>
-    <svg viewBox="0 0 460 330" role="img" aria-label="Automatic clusters and noise" style={{ width: '100%', maxWidth: 600 }}>
+    <ScatterExport><svg viewBox="0 0 460 330" role="img" aria-label="Automatic clusters and noise" style={{ width: '100%', maxWidth: 600 }}>
       <path d="M55 15 V280 H445" fill="none" stroke="currentColor" />
       {rows.map(i => <circle key={view.indices[i]} cx={bounds[0] === bounds[1] ? 250 : 55 + (view.data[i][x] - bounds[0]) / (bounds[1] - bounds[0]) * 390}
         cy={bounds[2] === bounds[3] ? 147 : 280 - (view.data[i][y] - bounds[2]) / (bounds[3] - bounds[2]) * 265} r="2" opacity="0.65" fill={clusterColor(view.labels[i], view.colorCount)}>
@@ -18,7 +19,7 @@ export function ClusterScatter({ view, x, y, population = 'all' }: { view: Clust
       <text transform="translate(15 150) rotate(-90)" textAnchor="middle">{view.channels[y]}</text>
       <text x="55" y="300" fontSize="10">{bounds[0].toPrecision(4)}</text><text x="445" y="300" textAnchor="end" fontSize="10">{bounds[1].toPrecision(4)}</text>
       <text x="50" y="280" textAnchor="end" fontSize="10">{bounds[2].toPrecision(4)}</text><text x="50" y="20" textAnchor="end" fontSize="10">{bounds[3].toPrecision(4)}</text>
-    </svg></>
+    </svg></ScatterExport></>
 }
 function Populations({ view }: { view: ClusterView }) {
   const [x, setX] = useState(0), [y, setY] = useState(Math.min(1, view.channels.length - 1))
